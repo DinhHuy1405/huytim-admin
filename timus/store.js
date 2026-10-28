@@ -37,6 +37,7 @@
       submittedAt: "submitted_at", reviewedAt: "reviewed_at" },
     report_comments: { reportId: "report_id", author: "author_email", body: "body" },
     work_sessions: { author: "author_email", startedAt: "started_at", endedAt: "ended_at", note: "note" },
+    staff_docs: { staffId: "staff_id", title: "title", kind: "kind", path: "path", sizeBytes: "size_bytes", signedOn: "signed_on", uploadedBy: "uploaded_by" },
     kpi_reviews: { critA: "crit_a", critB: "crit_b", critC: "crit_c", critD: "crit_d", bonus: "bonus", note: "note" },
     clients: { name: "name", contactName: "contact_name", phone: "phone", email: "email", status: "status", contractStart: "contract_start", notes: "notes" },
     staff_pay: { salary: "salary", allowance: "allowance", commission: "commission", payNote: "pay_note" },
@@ -65,10 +66,10 @@
     return o;
   }
   /* đọc ghi qua view public.timus_* (security_invoker, RLS của bảng gốc vẫn áp dụng) */
-  var GEN = ["staff", "tasks", "clients", "task_notes", "notes", "reports", "report_comments", "work_sessions"];
+  var GEN = ["staff", "tasks", "clients", "task_notes", "notes", "reports", "report_comments", "work_sessions", "staff_docs"];
   function T(name) { return sb.from("timus_" + name); }
   function C(name) { return sb.from("core_" + name); }
-  var PK = { kpi_reviews: "staff_id,month_start", reports: "id", report_comments: "id", work_sessions: "id", shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
+  var PK = { staff_docs: "id", kpi_reviews: "staff_id,month_start", reports: "id", report_comments: "id", work_sessions: "id", shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
   function up(name, rows) { return T(name).upsert(rows, { onConflict: PK[name] }); }
 
   /* ---------- ảnh chụp dữ liệu giống claude db ---------- */
@@ -117,7 +118,7 @@
     }
     throw { code: "invalid_argument", message: "Không có bảng " + name };
   }
-  var TABLES_OF = { shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], reports: ["reports"], report_comments: ["report_comments"], work_sessions: ["work_sessions"], kpi_reviews: ["kpi_reviews"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
+  var TABLES_OF = { shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], staff_docs: ["staff_docs"], reports: ["reports"], report_comments: ["report_comments"], work_sessions: ["work_sessions"], kpi_reviews: ["kpi_reviews"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
 
   function addDays(s, k) { var a = s.split("-").map(Number); return new Date(Date.UTC(a[0], a[1] - 1, a[2] + k)).toISOString().slice(0, 10); }
   async function loadWeek(w) {
@@ -166,7 +167,7 @@
     throw { code: "invalid_argument", message: "Không ghi được vào " + col };
   }
   async function delDoc(col, id) {
-    var map = { shops: ["shops", "id"], staff: ["staff", "id"], tasks: ["tasks", "id"], clients: ["clients", "id"], task_notes: ["task_notes", "id"], notes: ["notes", "id"], reports: ["reports", "id"], report_comments: ["report_comments", "id"], work_sessions: ["work_sessions", "id"], "secure/hr/pay": ["staff_pay", "staff_id"], "secure/biz/terms": ["client_terms", "client_id"] };
+    var map = { shops: ["shops", "id"], staff: ["staff", "id"], tasks: ["tasks", "id"], clients: ["clients", "id"], task_notes: ["task_notes", "id"], notes: ["notes", "id"], staff_docs: ["staff_docs", "id"], reports: ["reports", "id"], report_comments: ["report_comments", "id"], work_sessions: ["work_sessions", "id"], "secure/hr/pay": ["staff_pay", "staff_id"], "secure/biz/terms": ["client_terms", "client_id"] };
     var m = map[col]; if (!m) throw { code: "invalid_argument", message: "Không xóa được" };
     var rows = must(await T(m[0]).delete().eq(m[1], id).select(m[1]));
     if (!rows.length && col !== "secure/hr/pay" && col !== "secure/biz/terms") {
@@ -234,6 +235,12 @@
   var db = {
     doc: docRef,
     collection: function (n) { return colRef(n, {}); },
+    /* file riêng tư (hợp đồng, phụ lục) trong bucket timus-docs */
+    files: {
+      upload: async function (path, file) { must(await sb.storage.from("timus-docs").upload(path, file, { contentType: file.type || "application/pdf", upsert: false })); },
+      url: async function (path) { return must(await sb.storage.from("timus-docs").createSignedUrl(path, 120)).signedUrl; },
+      remove: async function (path) { must(await sb.storage.from("timus-docs").remove([path])); }
+    },
     /* quyền vào trang TIMUS (chỉ owner toàn hệ thống ghi được, theo RLS của core) */
     access: {
       get: async function (email) {

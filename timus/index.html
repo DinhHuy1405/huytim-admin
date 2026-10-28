@@ -272,6 +272,10 @@ details.ntg>summary::before{content:"";display:inline-block;width:0;height:0;bor
 details.ntg[open]>summary::before{transform:rotate(90deg)}
 details.ntg>summary:hover{background:var(--hover)}
 .gl{margin:2px 0 12px;padding-left:40px;display:grid;gap:6px;font-size:15px}
+.upl{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:6px;margin-top:8px}
+.upl input,.upl select{border:1px solid var(--line2);border-radius:4px;padding:6px 9px;min-width:0;background:#fff;font-size:14px;font-family:inherit}
+.upl input[type=file]{grid-column:1/-1;padding:5px}
+.upl .btn{grid-column:1/-1;justify-self:start}
 details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);font-size:14px;padding:4px 0}
 [hidden]{display:none!important}
 @media (max-width:640px){.filters input[type=search]{width:100%}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lbar{grid-column:1/-1;grid-row:2}}
@@ -294,7 +298,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 
 <script src="config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="store.js?v=4"></script>
+<script src="store.js?v=5"></script>
 <script>
 (function(){
 "use strict";
@@ -358,7 +362,7 @@ function mkTag(m){return '<span class="mk '+(m==="US"?"US":"VN")+'">'+(m==="US"?
 function opt(v,l,cur){return '<option value="'+esc(v)+'"'+(String(cur==null?"":cur)===String(v)?" selected":"")+'>'+esc(l)+'</option>'}
 
 /* ---------- trạng thái ---------- */
-var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],reports:[],repComments:[],sessions:[],kpi:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
+var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],reports:[],repComments:[],sessions:[],kpi:[],docs:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
   myId:null,admin:false,readonly:false,week:weekStart(todayVN()),month:todayVN().slice(0,7),
   f:{shop:{q:"",market:"",platform:"",status:"",staff:""},task:{mine:false,staff:"",shop:"",q:"",showDone:false},rep:""}};
 var db=null,user=null,subs={},metricsUnsub=null,confirmKey=null,drawer=null;
@@ -1020,6 +1024,49 @@ function kpiForm(key){
   }});
 }
 
+/* ---------- hợp đồng và tài liệu nhân viên (file riêng tư) ---------- */
+var DOC_KIND={contract:"Hợp đồng",appendix:"Phụ lục",other:"Tài liệu khác"};
+function docRow(d){
+  return '<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">'+esc(d.title)+'<small>'+[DOC_KIND[d.kind]||"",d.signedOn?"ký "+fmtDate(d.signedOn):"",d.sizeBytes?Math.round(d.sizeBytes/1024)+" KB":"",d.createdAt?"tải lên "+fmtTime(d.createdAt):""].filter(Boolean).join(" · ")+'</small></div>'
+   +'<div class="acts"><button class="btn sm" data-act="doc-open" data-id="'+d.id+'">Mở</button>'+(S.admin?'<button class="btn sm danger" data-act="doc-del" data-id="'+d.id+'">Xóa</button>':"")+'</div></div>';
+}
+function docsBlock(staffId){
+  return '<div class="fsec" style="margin-top:6px"><span>Hợp đồng và tài liệu</span><span class="pill mute">Riêng tư</span></div><div id="docs-list" class="alerts" style="margin-top:8px"></div>'
+   +(S.admin?'<div class="upl"><input id="doc-title" value="Hợp đồng cộng tác" aria-label="Tên tài liệu"><select id="doc-kind" aria-label="Loại tài liệu">'+Object.keys(DOC_KIND).map(function(k){return opt(k,DOC_KIND[k],"contract")}).join("")+'</select>'
+   +'<input type="date" id="doc-signed" aria-label="Ngày ký"><span></span><input type="file" id="doc-file" accept=".pdf,.png,.jpg,.jpeg,.docx" aria-label="Chọn file"><button class="btn sm primary" type="button" data-act="doc-up" data-id="'+staffId+'">Tải lên</button></div>'
+   +'<p class="note">File lưu trong kho riêng tư của Supabase, không nằm trên GitHub. Chỉ admin TIMUS và chính nhân viên này mở được; link mở file hết hạn sau 2 phút.</p>':"");
+}
+function renderDocs(staffId){
+  var el=$("#docs-list");if(!el)return;
+  var l=S.docs.filter(function(d){return d.staffId===staffId}).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+  el.innerHTML=l.length?l.map(docRow).join(""):'<p class="note">Chưa có tài liệu.</p>';
+}
+function fileSlug(n){return n.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[đĐ]/g,"d").toLowerCase().replace(/[^a-z0-9.]+/g,"-").replace(/^-+|-+$/g,"")||"file"}
+async function uploadDoc(staffId){
+  var inp=$("#doc-file"),f=inp&&inp.files&&inp.files[0];
+  if(!f){toast("Chọn file trước");return}
+  if(f.size>10485760){toast("File lớn hơn 10 MB, nén lại rồi thử lại");return}
+  var title=($("#doc-title").value||"").trim()||f.name,path="staff/"+staffId+"/"+Date.now()+"-"+fileSlug(f.name);
+  var btn=$('[data-act="doc-up"]');if(btn){btn.disabled=true;btn.textContent="Đang tải lên..."}
+  try{
+    await db.files.upload(path,f);
+    var ok=await put("staff_docs/"+newId("staff_docs"),{staffId:staffId,title:title,kind:$("#doc-kind").value,path:path,sizeBytes:f.size,signedOn:$("#doc-signed").value||""},"Đã tải lên "+title);
+    if(!ok){try{await db.files.remove(path)}catch(_){}}else inp.value="";
+  }catch(e){toast("Chưa tải lên được: "+((e&&e.message)||"lỗi không rõ"))}
+  if(btn){btn.disabled=false;btn.textContent="Tải lên"}
+}
+async function openDoc(id){
+  var d=byId(S.docs,id);if(!d)return;
+  var w=window.open("","_blank");
+  try{var url=await db.files.url(d.path);if(w)w.location.href=url;else location.href=url}
+  catch(e){if(w)w.close();toast("Chưa mở được file: "+((e&&e.message)||"không có quyền"))}
+}
+async function deleteDoc(id){
+  var d=byId(S.docs,id);if(!d)return;
+  try{await db.files.remove(d.path)}catch(e){toast("Chưa xóa được file: "+((e&&e.message)||""));return}
+  if(await del("staff_docs/"+id))toast("Đã xóa "+d.title);
+}
+
 /* ---------- cẩm nang và hướng dẫn ---------- */
 var GUIDE=[
   ["Mỗi ca tối (19:00 đến 23:30)",["Bấm Bắt đầu làm việc ở mục Việc của tôi.","Trả lời tin nhắn mới của người mua trong vòng 3 giờ, theo mẫu Huy đưa. Tin nhận ngoài khung thì trả lời ngay đầu ca kế tiếp.","Kiểm tra đơn chờ xác nhận, chờ lấy hàng, đơn giao trễ.","Xem đơn hủy và đơn hoàn: ghi lý do vào nhật ký việc; khiếu nại, hoàn tiền, đền bù thì chuyển Huy trước khi trả lời.","Đọc đánh giá mới; đánh giá 1 đến 3 sao báo Huy kèm ảnh chụp.","Xem tồn kho các SKU bán chạy, báo trước khi sắp hết.","Shopee Ads: xem chi tiêu và ROAS trong ngày, chỉnh theo hướng dẫn và ngân sách đã duyệt.","Ghi lại đã làm gì vào Nhật ký thực hiện của từng việc, tick xong việc, rồi bấm Kết thúc."]],
@@ -1030,7 +1077,9 @@ var GUIDE=[
   ["Khoản bổ sung 1.000.000 ₫ mỗi tháng (giai đoạn đầu)",["(a) Nộp đủ báo cáo tuần, kế hoạch tuần, báo cáo tháng đúng hạn, trễ không quá 1 lần.","(b) Tự lập kế hoạch tuần và hoàn thành từ 80% (việc chưa xong có lý do báo trước).","(c) Trả lời tin nhắn mới trong 3 giờ trong khung 19:00 đến 23:30.","(d) Không để xảy ra sai sót nghiêm trọng (đăng sai giá, vi phạm chính sách sàn, lộ dữ liệu).","Thời gian online không phải tiêu chí đánh giá; trang chỉ ghi lại để tiện phối hợp."]]
 ];
 function vGuide(){
-  return '<p class="note" style="margin:0 0 18px">Cẩm nang vận hành shop cho nhân viên TIMUS. Bấm <button class="btn sm" data-act="tour">Xem hướng dẫn nhanh</button> để xem lại cách dùng trang.</p>'
+  var m=me(),mine=m?S.docs.filter(function(d){return d.staffId===m.id}):[];
+  return (mine.length?'<h2 class="sec">Hợp đồng và tài liệu của tôi<span>chỉ bạn và Huy mở được</span></h2><div class="alerts" style="margin-bottom:24px">'+mine.map(docRow).join("")+'</div>':"")
+   +'<p class="note" style="margin:0 0 18px">Cẩm nang vận hành shop cho nhân viên TIMUS. Bấm <button class="btn sm" data-act="tour">Xem hướng dẫn nhanh</button> để xem lại cách dùng trang.</p>'
    +GUIDE.map(function(g,i){return '<details class="ntg"'+(i<2?" open":"")+'><summary>'+esc(g[0])+'</summary><ul class="gl">'+g[1].map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul></details>'}).join("");
 }
 var HELP={
@@ -1209,7 +1258,8 @@ function staffForm(st,access){
   ]);
   var mine=st.id?S.shops.filter(function(s){return s.ownerId===st.id||(s.supportIds||[]).indexOf(st.id)>=0}):[];
   openDrawer({title:st.id?"Nhân viên: "+st.name:"Thêm nhân viên",values:st,fields:fields,
-    extra:st.id?'<div class="fsec"><span>Shop đang phụ trách</span></div>'+(mine.length?'<div class="chips" style="margin-top:8px">'+mine.map(function(s){return '<span class="pill '+(s.ownerId===st.id?"info":"mute")+'">'+esc(s.name)+(s.ownerId===st.id?" · chính":" · hỗ trợ")+'</span>'}).join("")+'</div>':'<p class="note">Chưa phụ trách shop nào.</p>'):"",
+    live:st.id?function(){renderDocs(st.id)}:null,
+    extra:(st.id?docsBlock(st.id):"")+(st.id?'<div class="fsec"><span>Shop đang phụ trách</span></div>'+(mine.length?'<div class="chips" style="margin-top:8px">'+mine.map(function(s){return '<span class="pill '+(s.ownerId===st.id?"info":"mute")+'">'+esc(s.name)+(s.ownerId===st.id?" · chính":" · hỗ trợ")+'</span>'}).join("")+'</div>':'<p class="note">Chưa phụ trách shop nào.</p>'):""),
     onSave:async function(v){
       var acc=v.access;delete v.access;
       var parts=split(v,["salary","allowance","commission","payNote"]);
@@ -1398,6 +1448,11 @@ document.addEventListener("click",async function(e){
     case "settings":settingsForm();return;
     case "signout":if(window.TIMUS_AUTH)TIMUS_AUTH.signOut();return;
     case "help":openHelp(id);return;
+    case "doc-open":openDoc(id);return;
+    case "doc-up":uploadDoc(id);return;
+    case "doc-del":
+      if(confirmKey!=="doc"+id){confirmKey="doc"+id;t.textContent="Bấm lần nữa để xóa";return}
+      confirmKey=null;deleteDoc(id);return;
     case "tour":openTour(0);return;
     case "tour-next":openTour(TOUR_I+1);return;
     case "tour-prev":openTour(TOUR_I-1);return;
@@ -1483,7 +1538,7 @@ function mapCol(name,key){
   if(!R[h])S.view=S.admin?"overview":"mine";
   render(true);
   try{if(!S.admin&&!localStorage.getItem("timus-tour-1"))setTimeout(function(){openTour(0)},600)}catch(_){}
-  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");col("reports","reports");col("report_comments","repComments");col("work_sessions","sessions");col("kpi_reviews","kpi");
+  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");col("reports","reports");col("report_comments","repComments");col("work_sessions","sessions");col("kpi_reviews","kpi");col("staff_docs","docs");
   db.doc("settings/app").onSnapshot(function(s){S.settings=s.exists?Object.assign({},s.data()):{};schedule()},function(){});
   var tw=weekStart(todayVN());watchWeek(tw);watchWeek(addDays(tw,-7));watchWeek(S.week);
   watchMonth();
