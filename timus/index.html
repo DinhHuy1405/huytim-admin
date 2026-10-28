@@ -230,7 +230,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--so
 .login-card .btn{height:38px}
 #loginmsg{min-height:1.3em}
 html,body{margin:0}
-.qa{display:grid;grid-template-columns:minmax(0,1fr) 190px 150px 110px auto;gap:6px;margin:0 0 28px;padding:8px;border:1px solid var(--line);border-radius:6px}
+.qa{display:grid;grid-template-columns:minmax(0,1fr) 170px 150px 100px 160px auto;gap:6px;margin:0 0 28px;padding:8px;border:1px solid var(--line);border-radius:6px}
 .qa input,.qa select{border:1px solid var(--line2);border-radius:4px;padding:6px 9px;min-width:0;background:#fff;font-size:14.5px}
 @media (max-width:760px){.qa{grid-template-columns:1fr 1fr}.qa #qa-title{grid-column:1/-1}}
 .tlist{display:flex;flex-direction:column;margin-bottom:24px}
@@ -257,6 +257,21 @@ html,body{margin:0}
 .lg-h b{color:var(--ink);font-weight:500;font-size:14px}
 .lg-h .x{margin-left:auto}
 .lg p{margin:2px 0 0;white-space:pre-line;font-size:14.5px;overflow-wrap:anywhere}
+.hlp{border:0;background:var(--mute-bg);color:var(--mute);width:18px;height:18px;border-radius:50%;font-size:11.5px;font-weight:600;cursor:pointer;margin-left:8px;padding:0;line-height:18px;vertical-align:2px;font-family:inherit}
+.hlp:hover{background:var(--line2)}
+h2.sec .hlp{margin-right:auto}
+.tour-bg{position:fixed;inset:0;background:var(--scrim);z-index:70;display:grid;place-items:center;padding:16px}
+.tour{background:#fff;border-radius:8px;max-width:480px;width:100%;padding:22px 24px;box-shadow:0 0 0 1px rgba(15,15,15,.05),0 9px 24px rgba(15,15,15,.2);display:flex;flex-direction:column;gap:12px}
+.tour h3{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.tour p{margin:0;color:var(--muted);font-size:15px;line-height:1.6}
+.tour .dots{display:flex;gap:5px}.tour .dots i{width:6px;height:6px;border-radius:50%;background:var(--line2)}.tour .dots i.on{background:var(--ink)}
+details.ntg{border-bottom:1px solid var(--line);padding:4px 0}
+details.ntg>summary{cursor:pointer;font-size:17px;font-weight:600;padding:8px 4px;border-radius:4px;list-style:none}
+details.ntg>summary::-webkit-details-marker{display:none}
+details.ntg>summary::before{content:"";display:inline-block;width:0;height:0;border-left:6px solid var(--soft);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:10px;vertical-align:2px;transition:transform .12s}
+details.ntg[open]>summary::before{transform:rotate(90deg)}
+details.ntg>summary:hover{background:var(--hover)}
+.gl{margin:2px 0 12px;padding-left:40px;display:grid;gap:6px;font-size:15px}
 details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);font-size:14px;padding:4px 0}
 [hidden]{display:none!important}
 @media (max-width:640px){.filters input[type=search]{width:100%}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lbar{grid-column:1/-1;grid-row:2}}
@@ -279,12 +294,12 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 
 <script src="config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="store.js?v=3"></script>
+<script src="store.js?v=4"></script>
 <script>
 (function(){
 "use strict";
 /* ---------- danh mục ---------- */
-var VIEWS=[["mine","Việc của tôi"],["overview","Tổng quan"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["clients","Khách hàng"]];
+var VIEWS=[["mine","Việc của tôi"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["clients","Khách hàng"]];
 var PF={shopee:"Shopee",lazada:"Lazada",tiktok:"TikTok Shop",amazon:"Amazon",shopify:"Shopify",ebay:"eBay",other:"Sàn khác"};
 var MK={VN:"Việt Nam",US:"Mỹ"};
 var SHOP_ST={setup:["Đang thiết lập","info"],active:["Đang vận hành","ok"],paused:["Tạm dừng","warn"],stopped:["Đã dừng","mute"]};
@@ -301,6 +316,7 @@ var SHIFTS={
   HC:{label:"Hành chính",s:"08:30",e:"17:30",cls:"vn"},
   S:{label:"Ca sáng",s:"07:00",e:"15:00",cls:"vn"},
   C:{label:"Ca chiều",s:"14:00",e:"22:00",cls:"vn"},
+  T:{label:"Ca tối",s:"19:00",e:"23:30",cls:"vn"},
   US:{label:"Ca Mỹ",s:"20:00",e:"04:00",cls:"us"},
   UL:{label:"Ca Mỹ muộn",s:"23:00",e:"07:00",cls:"us"},
   OFF:{label:"Nghỉ",cls:"off"},
@@ -342,9 +358,9 @@ function mkTag(m){return '<span class="mk '+(m==="US"?"US":"VN")+'">'+(m==="US"?
 function opt(v,l,cur){return '<option value="'+esc(v)+'"'+(String(cur==null?"":cur)===String(v)?" selected":"")+'>'+esc(l)+'</option>'}
 
 /* ---------- trạng thái ---------- */
-var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
+var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],reports:[],repComments:[],sessions:[],kpi:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
   myId:null,admin:false,readonly:false,week:weekStart(todayVN()),month:todayVN().slice(0,7),
-  f:{shop:{q:"",market:"",platform:"",status:"",staff:""},task:{mine:false,staff:"",shop:"",q:"",showDone:false}}};
+  f:{shop:{q:"",market:"",platform:"",status:"",staff:""},task:{mine:false,staff:"",shop:"",q:"",showDone:false},rep:""}};
 var db=null,user=null,subs={},metricsUnsub=null,confirmKey=null,drawer=null;
 function fx(){return num(S.settings.fx)||25700}
 function overloadLimit(){return num(S.settings.overload)||4}
@@ -443,6 +459,12 @@ function buildAlerts(){
     if(bad.length)A.push({tone:"warn",t:"Chưa đạt chỉ số "+monthLabel(S.month),d:s.name+": "+bad.join(", "),act:"go-performance",id:""});
   });
   S.clients.filter(function(c){return c.status==="active"&&c.contractStart}).forEach(function(c){var r=nextRenewal(c.contractStart);var left=r?daysBetween(t,r):999;if(left<=30)A.push({tone:"info",t:"Hợp đồng đến kỳ gia hạn sau "+left+" ngày",d:c.name+" · kỳ mới từ "+fmtDate(r)+"; báo trước 30 ngày nếu muốn thay đổi",act:"edit-client",id:c.id})});
+  if(S.admin){
+    var wait=S.reports.filter(function(r){return r.status==="submitted"}).length;
+    if(wait)A.push({tone:"warn",t:wait+" báo cáo chờ bạn xem",d:"Đọc và trả lời ở phần trao đổi trong báo cáo",act:"go-reports",id:""});
+    var W=weekStart(t),due=vnMs(addDays(W,-1),12);
+    activeStaff().filter(function(st){return st.uid&&(!st.startDate||st.startDate<=addDays(W,-7))}).forEach(function(st){var r=repFor("week",addDays(W,-7),st.uid);if(Date.now()>due&&(!r||r.status==="draft"))A.push({tone:"warn",t:"Chưa nộp báo cáo tuần trước",d:st.name+" · hạn 12:00 Chủ nhật "+fmtDM(addDays(W,-1)),act:"go-reports",id:""})});
+  }
   var order={bad:0,warn:1,info:2};
   return A.sort(function(a,b){return order[a.tone]-order[b.tone]});
 }
@@ -455,7 +477,8 @@ function renderSide(){
     return l.length?'<h5>'+lb+'</h5>'+l.map(function(s){return '<a class="nsb-st'+(s.status==="paused"?" dim":"")+'" data-act="edit-shop" data-id="'+s.id+'" title="'+esc(s.name)+'"><span>'+esc(s.name)+'</span><small>'+esc(PF[s.platform]||"")+'</small></a>'}).join(""):"";
   };
   $("#side").innerHTML='<div class="ws"><i>H</i>Huy Tim</div><a href="../" class="dim"><span>Tất cả business</span></a><h5>TIMUS Vận hành</h5>'
-    +VIEWS.map(function(v){return '<a href="#'+v[0]+'" data-view="'+v[0]+'"'+(S.view===v[0]?' aria-current="page"':"")+'><span>'+v[1]+'</span>'+(cnt[v[0]]?'<small>'+cnt[v[0]]+'</small>':"")+'</a>'}).join("")
+    +VIEWS.filter(function(v){return S.admin||v[0]!=="clients"}).map(function(v){return '<a href="#'+v[0]+'" data-view="'+v[0]+'"'+(S.view===v[0]?' aria-current="page"':"")+'><span>'+v[1]+'</span>'+(cnt[v[0]]?'<small>'+cnt[v[0]]+'</small>':"")+'</a>'}).join("")
+    +'<a data-act="tour" class="dim"><span>Hướng dẫn nhanh</span></a>'
     +'<div class="nsb-st">'+grp("VN","Shop Việt Nam")+grp("US","Shop Mỹ")+'</div>'
     +'<div class="who" id="who"></div>';
   $("#ptitle").textContent=(VIEWS.filter(function(v){return v[0]===S.view})[0]||VIEWS[0])[1];
@@ -578,10 +601,10 @@ function vStaff(){
     var tk=S.tasks.filter(function(x){return x.assigneeId===st.id&&x.status!=="done"});
     var late=tk.filter(function(x){return x.due&&x.due<t}).length;
     var sc=shiftOf(st.id,t),sh=SHIFTS[sc];
-    var p=S.pay[st.id];
+    var p=S.pay[st.id],on=st.uid&&S.sessions.some(function(x){return x.author===st.uid&&!x.endedAt});
     return '<article class="pcard" tabindex="0" data-act="edit-staff" data-id="'+st.id+'"><div class="top"><span class="nm">'+esc(st.name)+'</span>'+pill(STAFF_ST[st.status||"active"])+'</div>'
      +'<dl class="kv"><dt>Vai trò</dt><dd>'+esc(st.role||"")+'</dd><dt>Thị trường</dt><dd>'+esc(STAFF_MK[st.market]||"")+'</dd>'
-     +'<dt>Hôm nay</dt><dd>'+(sh?esc(sh.label)+(sh.s?" "+sh.s+"-"+sh.e:""):'<span class="t2">Chưa xếp ca</span>')+'</dd>'
+     +'<dt>Hôm nay</dt><dd>'+(sh?esc(sh.label)+(sh.s?" "+sh.s+"-"+sh.e:""):'<span class="t2">Chưa xếp ca</span>')+(on?' <span class="pill ok">Đang online</span>':"")+(st.uid&&S.sessions.length?'<div class="t2">'+fmtMin(onlineMinutes(st.uid,t))+' online hôm nay</div>':"")+'</dd>'
      +'<dt>Shop chính</dt><dd>'+(main.length?esc(main.map(function(s){return s.name}).join(", ")):"Không")+'</dd>'
      +(sup.length?'<dt>Hỗ trợ</dt><dd>'+esc(sup.map(function(s){return s.name}).join(", "))+'</dd>':"")
      +'<dt>Việc mở</dt><dd>'+tk.length+(late?' <span class="pill bad">'+late+' quá hạn</span>':"")+'</dd>'
@@ -729,22 +752,24 @@ function vMine(){
   var h="";
   if(!m)h+='<div class="banner">Tài khoản '+esc(S.myId||"")+' chưa gắn với hồ sơ nhân viên nào, nên ở đây chỉ hiện việc do chính bạn tạo. Nhờ admin điền email này vào ô Email đăng nhập trong hồ sơ nhân viên.</div>';
   h+='<div class="stats">'+stat(open.length,"việc đang mở")+stat(groups[0][1].length,"việc quá hạn",groups[0][1].length?"bad":"ok")+stat(groups[1][1].length,"việc hạn hôm nay",groups[1][1].length?"warn":"")+stat(myShops.length,"shop đang phụ trách")+stat(sh?esc(sh.label):"Chưa xếp","ca hôm nay"+(sh&&sh.s?" ("+sh.s+"-"+sh.e+")":""))+'</div>';
+  h+=workPanel(m,t);
   if(!S.readonly){
     var shopChoices=(myShops.length?myShops:S.shops.filter(function(s){return s.status!=="stopped"}));
     h+='<form class="qa" id="qa"><input id="qa-title" placeholder="Thêm việc mới, ví dụ: Trả lời 12 tin nhắn tồn" aria-label="Việc mới" autocomplete="off" value="'+esc(S.qa.title)+'">'
       +'<select id="qa-shop" aria-label="Shop">'+opt("","Việc chung",S.qa.shop)+shopChoices.map(function(s){return opt(s.id,s.name,S.qa.shop)}).join("")+'</select>'
       +'<input type="date" id="qa-due" aria-label="Hạn" value="'+esc(S.qa.due||t)+'">'
       +'<select id="qa-prio" aria-label="Ưu tiên">'+Object.keys(PRIO).map(function(k){return opt(k,PRIO[k][0],S.qa.prio)}).join("")+'</select>'
+      +'<select id="qa-plan" aria-label="Thuộc kế hoạch tuần">'+opt("this","Kế hoạch tuần này",S.qa.plan)+opt("next","Kế hoạch tuần sau",S.qa.plan)+opt("","Việc phát sinh",S.qa.plan)+'</select>'
       +'<button class="btn primary" type="submit">Thêm việc</button></form>';
   }
   h+='<div class="cols2"><section>';
   var any=false;
-  groups.forEach(function(g){if(!g[1].length)return;any=true;h+='<h2 class="sec">'+g[0]+'<span>'+g[1].length+' việc</span></h2><div class="tlist">'+g[1].sort(byDue).map(function(x){return taskLine(x,t)}).join("")+'</div>'});
+  groups.forEach(function(g){if(!g[1].length)return;h+='<h2 class="sec">'+g[0]+(any?"":helpBtn("tasks"))+'<span>'+g[1].length+' việc</span></h2>';any=true;h+='<div class="tlist">'+g[1].sort(byDue).map(function(x){return taskLine(x,t)}).join("")+'</div>'});
   if(!any)h+='<h2 class="sec">Việc cần làm</h2><div class="empty">Chưa có việc nào đang mở. Gõ việc cần làm vào ô phía trên rồi bấm Thêm việc.</div>';
   if(done.length)h+='<details class="dn"><summary>Đã xong 7 ngày qua ('+done.length+')</summary><div class="tlist">'+done.map(function(x){return taskLine(x,t)}).join("")+'</div></details>';
   var mine=S.notes.filter(function(n){return n.author===S.myId}).sort(function(a,b){return (b.pinned-a.pinned)||((b.updatedAt||0)-(a.updatedAt||0))});
   var team=S.notes.filter(function(n){return n.author!==S.myId&&n.shared}).sort(function(a,b){return (b.updatedAt||0)-(a.updatedAt||0)}).slice(0,10);
-  h+='</section><section><h2 class="sec">Ghi chú của tôi'+(S.readonly?"":'<span><button class="btn sm" data-act="add-note">Ghi chú mới</button></span>')+'</h2>'
+  h+='</section><section><h2 class="sec">Ghi chú của tôi'+helpBtn("notes")+(S.readonly?"":'<span><button class="btn sm" data-act="add-note">Ghi chú mới</button></span>')+'</h2>'
     +(mine.length?'<div class="notes">'+mine.map(noteCard).join("")+'</div>':'<div class="empty">Chưa có ghi chú. Ghi lại mẹo xử lý, thông tin khách, việc cần nhớ của từng shop. Chỉ bạn thấy, trừ khi bật Chia sẻ cho cả nhóm.</div>')
     +(team.length?'<h2 class="sec" style="margin-top:24px">Ghi chú nhóm<span>đồng nghiệp chia sẻ</span></h2><div class="notes">'+team.map(noteCard).join("")+'</div>':"")
     +(myShops.length?'<h2 class="sec" style="margin-top:24px">Shop tôi phụ trách</h2><div class="alerts">'+myShops.map(function(s){var n=S.tasks.filter(function(x){return x.shopId===s.id&&x.status!=="done"}).length;return '<div class="alert" style="grid-template-columns:minmax(0,1fr) auto auto"><div class="msg">'+esc(s.name)+'<small>'+pfTag(s.platform)+' '+mkTag(s.market)+(s.ownerId===m.id?" · phụ trách chính":" · hỗ trợ")+'</small></div>'+(s.health?pill(HEALTH[s.health]):"")+'<span class="t2">'+n+' việc</span></div>'}).join("")+'</div>':"")
@@ -754,7 +779,9 @@ function vMine(){
 async function quickAdd(){
   var title=(S.qa.title||"").trim();if(!title){toast("Gõ việc cần làm trước");var el=$("#qa-title");if(el)el.focus();return}
   var m=me(),id=newId("tasks");
-  var ok=await put("tasks/"+id,{title:title,shopId:S.qa.shop||"",assigneeId:m?m.id:"",priority:S.qa.prio||"normal",due:S.qa.due||todayVN(),status:"todo",checklist:[]},"Đã thêm việc");
+  var W=weekStart(todayVN()),pw=S.qa.plan==="this"?W:S.qa.plan==="next"?addDays(W,7):"";
+  var due=S.qa.due||todayVN();if(pw&&due<pw)due=pw;
+  var ok=await put("tasks/"+id,{title:title,shopId:S.qa.shop||"",assigneeId:m?m.id:"",priority:S.qa.prio||"normal",due:due,status:"todo",checklist:[],planWeek:pw},pw?"Đã thêm vào kế hoạch "+(S.qa.plan==="this"?"tuần này":"tuần sau"):"Đã thêm việc");
   if(ok){S.qa.title="";render(true);var el2=$("#qa-title");if(el2)el2.focus()}
 }
 async function toggleDone(id,checked){
@@ -799,8 +826,244 @@ async function addLog(){
   if(await put("task_notes/"+newId("task_notes"),{taskId:drawer.taskId,body:v},"Đã ghi lại")){inp.value=""}
 }
 
+/* ---------- giờ, hạn nộp, tháng làm việc ---------- */
+function vnMs(date,h,mi){return d2n(date)+((h-7)*60+(mi||0))*6e4}
+function leftText(ms){var d=ms-Date.now(),late=d<0;d=Math.abs(d);var hrs=Math.floor(d/36e5),days=Math.floor(hrs/24);var txt=days>=1?days+" ngày "+(hrs%24)+" giờ":hrs>=1?hrs+" giờ "+Math.floor(d%36e5/6e4)+" phút":Math.floor(d/6e4)+" phút";return late?"trễ "+txt:"còn "+txt}
+function workMonth(st,date){
+  var start=(st&&st.startDate)||date.slice(0,8)+"01";
+  if(date<start)return {start:start,end:addDays(addMonths(start,1),-1),idx:0,future:true};
+  var n=monthsSince(start,date);var ms=addMonths(start,n);return {start:ms,end:addDays(addMonths(start,n+1),-1),idx:n};
+}
+function myReports(){return S.reports.filter(function(r){return r.author===S.myId})}
+function repFor(kind,start,author){return S.reports.filter(function(r){return r.kind===kind&&r.periodStart===start&&r.author===(author||S.myId)})[0]||null}
+function repPill(r,dueMs){
+  if(!r||r.status==="draft")return Date.now()>dueMs?'<span class="pill bad">Chưa nộp, '+leftText(dueMs)+'</span>':'<span class="pill '+(dueMs-Date.now()<864e5?"warn":"mute")+'">'+(r?"Nháp, ":"")+leftText(dueMs)+'</span>';
+  var late=r.submittedAt&&Date.parse(r.submittedAt)>dueMs;
+  return r.status==="reviewed"?'<span class="pill ok">Huy đã xem</span>':'<span class="pill '+(late?"warn":"info")+'">Đã nộp'+(late?" trễ":"")+'</span>';
+}
+function mySession(){return S.sessions.filter(function(x){return x.author===S.myId&&!x.endedAt})[0]||null}
+function onlineMinutes(author,date){
+  return S.sessions.filter(function(x){return x.author===author&&x.startedAt&&new Intl.DateTimeFormat("en-CA",{timeZone:TZ.VN}).format(new Date(x.startedAt))===date}).reduce(function(a,x){return a+Math.max(0,((x.endedAt?Date.parse(x.endedAt):Date.now())-Date.parse(x.startedAt))/6e4)},0);
+}
+function fmtMin(n){n=Math.round(n);return n>=60?Math.floor(n/60)+" giờ "+(n%60)+" phút":n+" phút"}
+async function toggleOnline(){
+  var cur=mySession();
+  if(cur){if(await put("work_sessions/"+cur.id,Object.assign({},cur,{endedAt:new Date().toISOString()}),"Đã kết thúc phiên làm việc"))render(true);return}
+  await put("work_sessions/"+newId("work_sessions"),{startedAt:new Date().toISOString()},"Đã bắt đầu phiên làm việc. Nhớ bấm Kết thúc khi nghỉ.");
+}
+function planStats(staff,email,week){
+  var l=S.tasks.filter(function(x){return x.planWeek===week&&((staff&&x.assigneeId===staff.id)||(!x.assigneeId&&x.createdBy===email))});
+  var d=l.filter(function(x){return x.status==="done"}).length;return {total:l.length,done:d,pct:l.length?Math.round(d/l.length*100):null};
+}
+function workPanel(m,t){
+  if(S.admin&&!m)return "";
+  var W=weekStart(t),due=vnMs(addDays(W,6),12),sess=mySession(),mins=onlineMinutes(S.myId,t);
+  var thisPlan=planStats(m,S.myId,W),nextPlan=planStats(m,S.myId,addDays(W,7));
+  var wm=workMonth(m,t),prevEnd=addDays(wm.start,-1),prev=workMonth(m,addDays(wm.start,-1));
+  var mShow=(!wm.future&&wm.idx>0&&t<=addDays(prevEnd,2))?prev:wm;
+  var mDue=vnMs(addDays(mShow.end,2),23,59);
+  var wr=repFor("week",W),mr=repFor("month",mShow.start);
+  var h='<div class="cols2" style="margin-bottom:28px"><section><h2 class="sec">Hôm nay'+helpBtn("online")+'<span>'+fmtMin(mins)+' online</span></h2>'
+   +'<div class="alert'+(sess?"":" warn")+'" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">'+(sess?'Đang trong phiên làm việc từ '+fmtTime(Date.parse(sess.startedAt)):'Chưa bắt đầu phiên làm việc hôm nay')+'<small>Chỉ để Huy biết lúc nào bạn trực tuyến, không dùng để chấm điểm.</small></div>'
+   +(S.readonly?"":'<button class="btn '+(sess?"":"primary")+'" data-act="online">'+(sess?"Kết thúc":"Bắt đầu làm việc")+'</button>')+'</div>'
+   +'<h2 class="sec" style="margin-top:22px">Kế hoạch tuần'+helpBtn("plan")+'<span>tuần '+fmtDM(W)+' đến '+fmtDM(addDays(W,6))+'</span></h2>'
+   +'<div class="alerts"><div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần này: xong '+thisPlan.done+'/'+thisPlan.total+' việc đã lên kế hoạch<small>Mục tiêu từ 80%. Việc phát sinh không tính vào tỷ lệ.</small></div>'+(thisPlan.pct==null?'<span class="pill mute">Chưa lên kế hoạch</span>':'<span class="pill '+(thisPlan.pct>=80?"ok":"warn")+'">'+thisPlan.pct+'%</span>')+'</div>'
+   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần sau: đã lên '+nextPlan.total+' việc<small>Hạn lên kế hoạch: 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'. Thêm việc ở ô bên dưới, chọn Kế hoạch tuần sau.</small></div>'+(nextPlan.total?'<span class="pill ok">Đã lên</span>':'<span class="pill '+(Date.now()>due?"bad":"mute")+'">'+leftText(due)+'</span>')+'</div></div>'
+   +'</section><section><h2 class="sec">Hạn nộp báo cáo'+helpBtn("reports")+'<span><button class="btn sm" data-act="go-reports">Mở Báo cáo</button></span></h2><div class="alerts">'
+   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Báo cáo tuần '+fmtDM(W)+' đến '+fmtDM(addDays(W,6))+'<small>Hạn 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'</small></div>'+repPill(wr,due)+'</div>'
+   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Báo cáo tháng '+fmtDM(mShow.start)+' đến '+fmtDM(mShow.end)+(mShow.future?' (bắt đầu '+fmtDate(mShow.start)+')':'')+'<small>Hạn trong 2 ngày sau khi hết tháng làm việc ('+fmtDM(addDays(mShow.end,2))+')</small></div>'+repPill(mr,mDue)+'</div>'
+   +'</div></section></div>';
+  return h;
+}
+
+/* ---------- báo cáo ---------- */
+var REP_KIND={week:"Báo cáo tuần",month:"Báo cáo tháng"};
+var NUMS=[["sales","Doanh số (₫)"],["orders","Số đơn"],["aov","Giá trị đơn trung bình (₫)"],["visits","Lượt truy cập"],["buyers","Số người mua"],["cvr","Tỷ lệ chuyển đổi (%)"],["adSpend","Chi Shopee Ads (₫)"],["adSales","Doanh thu từ Ads (₫)"]];
+function reportCard(r){
+  var due=r.kind==="week"?vnMs(r.periodEnd,12):vnMs(addDays(r.periodEnd,2),23,59);
+  var nc=S.repComments.filter(function(c){return c.reportId===r.id}).length;
+  return '<article class="pcard" tabindex="0" data-act="edit-report" data-id="'+r.id+'"><div class="top"><span class="nm">'+REP_KIND[r.kind]+' '+fmtDM(r.periodStart)+' đến '+fmtDM(r.periodEnd)+'</span>'+(r.status==="draft"?'<span class="pill mute">Nháp</span>':repPill(r,due))+'</div>'
+   +'<div class="t2">'+[S.admin&&r.author!==S.myId?esc(authorName(r.author)):"",r.shopId?esc(shopName(r.shopId)):"",r.submittedAt?"nộp "+fmtTime(Date.parse(r.submittedAt)):"",r.ideasCount?r.ideasCount+" ý tưởng":"",nc?nc+" trao đổi":""].filter(Boolean).join(" · ")+'</div>'
+   +(r.summary?'<p class="nb">'+esc(r.summary)+'</p>':"")+'</article>';
+}
+function vReports(){
+  var t=todayVN(),m=me();
+  var list=(S.admin?S.reports.filter(function(r){return r.status!=="draft"||r.author===S.myId}):myReports());
+  var f=S.f.rep||"";
+  if(f==="wait")list=list.filter(function(r){return r.status==="submitted"});
+  else if(f)list=list.filter(function(r){return r.author===f});
+  list=list.slice().sort(function(a,b){return a.periodStart<b.periodStart?1:a.periodStart>b.periodStart?-1:(a.kind<b.kind?1:-1)});
+  var waiting=S.reports.filter(function(r){return r.status==="submitted"}).length;
+  var h='<div class="toolbar"><div class="filters">';
+  if(S.admin){
+    var authors=[];S.reports.forEach(function(r){if(authors.indexOf(r.author)<0)authors.push(r.author)});
+    h+='<button class="btn'+(!f?" on":"")+'" data-act="rep-filter" data-id="">Tất cả</button><button class="btn'+(f==="wait"?" on":"")+'" data-act="rep-filter" data-id="wait">Chờ bạn xem ('+waiting+')</button>'
+      +authors.map(function(a){return '<button class="btn'+(f===a?" on":"")+'" data-act="rep-filter" data-id="'+esc(a)+'">'+esc(authorName(a))+'</button>'}).join("");
+  }else h+='<span class="note">Viết báo cáo ngay trên trang. Huy đọc và trả lời ở phần trao đổi bên dưới mỗi báo cáo.</span>';
+  h+='</div>'+(S.readonly?"":'<div class="acts"><button class="btn" data-act="new-report" data-id="month">Viết báo cáo tháng</button><button class="btn primary" data-act="new-report" data-id="week">Viết báo cáo tuần</button></div>')+'</div>';
+  h+='<h2 class="sec">Báo cáo'+helpBtn("reports")+'<span>'+list.length+' báo cáo</span></h2>';
+  h+=list.length?'<div class="grid-cards">'+list.map(reportCard).join("")+'</div>':'<div class="empty">'+(S.admin?"Chưa có báo cáo nào được nộp.":"Chưa có báo cáo. Bấm Viết báo cáo tuần để bắt đầu; trang tự điền sẵn các việc bạn đã xong trong tuần.")+'</div>';
+  h+='<section class="block"><h2 class="sec">Đánh giá tháng'+helpBtn("kpi")+'<span>theo tiêu chí khoản bổ sung trong hợp đồng</span></h2>'+kpiTable()+'</section>';
+  return h;
+}
+function reportForm(r,kind){
+  var m=me(),t=todayVN();
+  if(!r){
+    kind=kind||"week";
+    var start,end;
+    if(kind==="week"){start=weekStart(t);end=addDays(start,6)}
+    else{var wm=workMonth(m,t);var p=(!wm.future&&wm.idx>0&&t<=addDays(wm.start,1))?workMonth(m,addDays(wm.start,-1)):wm;start=p.start;end=p.end}
+    var ex=repFor(kind,start);if(ex){reportForm(ex);return}
+    var doneT=myTasks().filter(function(x){return x.status==="done"&&x.doneAt&&x.doneAt>=start&&x.doneAt<=end});
+    var nextW=addDays(weekStart(t),7);
+    var planT=myTasks().filter(function(x){return x.planWeek===nextW});
+    var mainShop=m?S.shops.filter(function(s){return s.ownerId===m.id&&s.status!=="stopped"})[0]:null;
+    r={kind:kind,periodStart:start,periodEnd:end,shopId:mainShop?mainShop.id:"",status:"draft",numbers:{},
+      summary:doneT.map(function(x){return "- "+x.title}).join("\n"),nextPlan:kind==="week"?planT.map(function(x){return "- "+x.title}).join("\n"):"",issues:"",ideas:"",ideasCount:0};
+  }
+  var own=r.author?r.author===S.myId:true;
+  var ro=!S.admin&&(!own||r.status==="reviewed");
+  var vals=Object.assign({},r);NUMS.forEach(function(n){vals["n_"+n[0]]=(r.numbers||{})[n[0]]});
+  var fields=[
+    {type:"section",label:"Kỳ báo cáo"},
+    {k:"periodStart",label:"Từ ngày",type:"date"},{k:"periodEnd",label:"Đến ngày",type:"date"},
+    {k:"shopId",label:"Shop",type:"select",wide:true,options:function(){return [["","Nhiều shop / việc chung"]].concat(S.shops.filter(function(s){return s.status!=="stopped"}).map(function(s){return [s.id,s.name]}))}},
+    {type:"section",label:"Số liệu"}
+  ].concat(NUMS.map(function(n){return {k:"n_"+n[0],label:n[1],type:"number"}})).concat([
+    {type:"section",label:"Nội dung"},
+    {k:"summary",label:"Đã làm được gì",type:"textarea",rows:6,ph:"Mỗi dòng một việc, kèm kết quả nếu có"},
+    {k:"issues",label:"Vấn đề phát sinh, rủi ro, cần Huy hỗ trợ",type:"textarea",rows:4},
+    {k:"ideas",label:"Ý tưởng cải thiện (kèm số liệu)",type:"textarea",rows:4,ph:"Ví dụ: SKU A có 1.200 lượt xem nhưng tỷ lệ chuyển đổi 0,4%, đề xuất đổi ảnh bìa và thêm voucher 10k"},
+    {k:"ideasCount",label:"Số ý tưởng trong báo cáo này",type:"number",hint:"Mỗi tháng nên có ít nhất 2 ý tưởng"},
+    {k:"nextPlan",label:r.kind==="week"?"Kế hoạch tuần tới":"Kế hoạch tháng tới",type:"textarea",rows:5}
+  ]);
+  var buttons=[];
+  if(!ro&&own&&r.status==="draft")buttons.push({act:"rep-draft",label:"Lưu nháp"});
+  if(S.admin&&r.id&&r.status==="submitted"&&!own)buttons.push({act:"rep-reviewed",label:"Đánh dấu đã xem",cls:"primary"});
+  openDrawer({title:REP_KIND[r.kind]+" "+fmtDM(r.periodStart)+" đến "+fmtDM(r.periodEnd)+(r.author&&!own?" · "+authorName(r.author):""),values:vals,fields:fields,ro:ro,repId:r.id||null,
+    buttons:buttons,saveLabel:own?(r.status==="draft"?"Nộp báo cáo":"Cập nhật báo cáo"):"Lưu",
+    live:function(){renderRepComments()},
+    extra:r.id?'<div class="fsec" style="margin-top:6px"><span>Trao đổi với Huy</span></div><div id="rclog"></div><div class="log-add"><textarea id="rc-new" placeholder="'+(S.admin&&!own?"Nhận xét, góp ý, việc cần làm thêm...":"Hỏi thêm, giải thích, cập nhật...")+'" aria-label="Viết trao đổi"></textarea><button class="btn sm primary" type="button" data-act="rc-add">Gửi</button></div>':'<p class="note" style="margin-top:14px">Sau khi nộp, Huy đọc và trả lời ngay trong báo cáo này.</p>',
+    onSave:async function(v){
+      var mode=(drawer&&drawer.mode)||(own?"submit":"keep");if(drawer)drawer.mode=null;
+      var nums={};NUMS.forEach(function(n){var x=v["n_"+n[0]];delete v["n_"+n[0]];if(x!==""&&x!=null)nums[n[0]]=x});
+      var d=Object.assign({},r,v,{numbers:nums,ideasCount:num(v.ideasCount)});
+      if(mode==="draft")d.status="draft";else if(mode==="submit"&&r.status==="draft")d.status="submitted";else if(mode==="reviewed")d.status="reviewed";
+      if(!d.periodStart||!d.periodEnd||d.periodEnd<d.periodStart){toast("Kiểm tra lại ngày bắt đầu và kết thúc của kỳ báo cáo");return false}
+      return put("reports/"+(r.id||newId("reports")),d,d.status==="draft"?"Đã lưu nháp":d.status==="reviewed"?"Đã đánh dấu đã xem":"Đã nộp báo cáo cho Huy");
+    },
+    onDelete:r.id&&own&&r.status==="draft"?async function(){var ok=await del("reports/"+r.id);if(ok)toast("Đã xóa nháp");return ok}:null});
+}
+function renderRepComments(){
+  var el=$("#rclog");if(!el||!drawer||!drawer.repId)return;
+  var l=S.repComments.filter(function(c){return c.reportId===drawer.repId}).sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)});
+  el.innerHTML=l.length?l.map(function(c){return '<div class="lg"><div class="lg-h"><b>'+esc(c.author===S.myId?"Bạn":authorName(c.author))+'</b><span>'+fmtTime(c.createdAt)+'</span></div><p>'+esc(c.body)+'</p></div>'}).join(""):'<p class="note">Chưa có trao đổi.</p>';
+}
+async function addRepComment(){
+  var inp=$("#rc-new"),v=inp?inp.value.trim():"";if(!v||!drawer||!drawer.repId)return;
+  if(await put("report_comments/"+newId("report_comments"),{reportId:drawer.repId,body:v},"Đã gửi"))inp.value="";
+}
+
+/* ---------- đánh giá tháng ---------- */
+function kpiRows(st){
+  var email=st.uid||"";if(!email)return [];
+  var t=todayVN(),cur=workMonth(st,t);if(cur.future)return [{st:st,m:cur,future:true}];
+  var rows=[];
+  for(var i=Math.max(0,cur.idx-5);i<=cur.idx;i++){
+    var start=addMonths((st.startDate||cur.start),i),end=addDays(addMonths((st.startDate||cur.start),i+1),-1);
+    var weeks=[];for(var w=weekStart(start);w<=end;w=addDays(w,7)){var sun=addDays(w,6);if(sun>=start&&sun<=end)weeks.push(w)}
+    var late=0,missing=0;weeks.forEach(function(w){var r=repFor("week",w,email),due=vnMs(addDays(w,6),12);if(Date.now()<due)return;if(!r||r.status==="draft")missing++;else if(Date.parse(r.submittedAt)>due)late++});
+    var mr=repFor("month",start,email),mdue=vnMs(addDays(end,2),23,59);
+    if(Date.now()>mdue){if(!mr||mr.status==="draft")missing++;else if(Date.parse(mr.submittedAt)>mdue)late++}
+    var tot=0,dn=0;weeks.forEach(function(w){var p=planStats(st,email,w);tot+=p.total;dn+=p.done});
+    var ideas=S.reports.filter(function(r){return r.author===email&&r.status!=="draft"&&r.periodStart>=start&&r.periodStart<=end}).reduce(function(a,r){return a+num(r.ideasCount)},0);
+    var rv=S.kpi.filter(function(k){return k.staffId===st.id&&k.month===start})[0]||null;
+    rows.push({st:st,m:{start:start,end:end},late:late,missing:missing,pct:tot?Math.round(dn/tot*100):null,tot:tot,ideas:ideas,rv:rv,ended:t>end});
+  }
+  return rows.reverse();
+}
+function critPill(v,auto){if(v===true)return '<span class="pill ok">Đạt</span>';if(v===false)return '<span class="pill bad">Chưa đạt</span>';return auto==null?'<span class="pill mute">Chưa đánh giá</span>':'<span class="pill '+(auto?"info":"warn")+'">Gợi ý: '+(auto?"đạt":"chưa đạt")+'</span>'}
+function kpiTable(){
+  var staffList=S.admin?activeStaff().filter(function(s){return s.uid}):(me()?[me()]:[]);
+  if(!staffList.length)return '<div class="empty">'+(S.admin?"Chưa có nhân viên nào gắn email đăng nhập.":"Tài khoản chưa gắn với hồ sơ nhân viên.")+'</div>';
+  var h='<div class="tbl"><table><thead><tr>'+(S.admin?'<th>Nhân viên</th>':'')+'<th>Tháng làm việc</th><th>(a) Báo cáo đúng hạn</th><th>(b) Hoàn thành kế hoạch</th><th>(c) Trả lời chat 3 giờ</th><th>(d) Không sai sót</th><th class="num">Ý tưởng</th><th class="num">Khoản bổ sung</th></tr></thead><tbody>';
+  var any=false;
+  staffList.forEach(function(st){kpiRows(st).forEach(function(r){
+    any=true;
+    if(r.future){h+='<tr>'+(S.admin?'<td>'+esc(st.name)+'</td>':'')+'<td>Bắt đầu '+fmtDate(r.m.start)+'</td><td colspan="6" class="t2">Chưa tới ngày bắt đầu</td></tr>';return}
+    var rv=r.rv||{},autoA=r.ended||r.late+r.missing>1?(r.late+r.missing<=1):null,autoB=r.pct==null?null:r.pct>=80;
+    h+='<tr'+(S.admin?' class="click" data-act="kpi" data-id="'+st.id+'__'+r.m.start+'"':'')+'>'+(S.admin?'<td class="t1">'+esc(st.name)+'</td>':'')+'<td>'+fmtDM(r.m.start)+' đến '+fmtDM(r.m.end)+(r.ended?"":'<div class="t2">đang diễn ra</div>')+'</td>'
+      +'<td>'+critPill(rv.critA,autoA)+'<div class="t2">trễ '+r.late+', thiếu '+r.missing+'</div></td>'
+      +'<td>'+critPill(rv.critB,autoB)+'<div class="t2">'+(r.pct==null?"chưa có kế hoạch":r.pct+"% của "+r.tot+" việc")+'</div></td>'
+      +'<td>'+critPill(rv.critC,null)+'</td><td>'+critPill(rv.critD,null)+'</td>'
+      +'<td class="num">'+r.ideas+(r.ideas<2?' <span class="pill mute">cần 2</span>':"")+'</td>'
+      +'<td class="num">'+(rv.bonus!=null&&rv.bonus!==""?fmtVND(num(rv.bonus)):'<span class="t2">chưa chốt</span>')+'</td></tr>';
+  })});
+  h+='</tbody></table></div><p class="note">(a), (b) tự tính từ báo cáo và kế hoạch tuần trên trang, chỉ là gợi ý. (c), (d) và khoản bổ sung do Huy chốt khi review cuối tháng.'+(S.admin?" Bấm vào một dòng để chấm.":"")+'</p>';
+  return any?h:'<div class="empty">Chưa có tháng làm việc nào.</div>';
+}
+function kpiForm(key){
+  var p=key.split("__"),st=byId(S.staff,p[0]);if(!st)return;
+  var cur=S.kpi.filter(function(k){return k.staffId===p[0]&&k.month===p[1]})[0]||{};
+  var yn=function(){return [["","Chưa đánh giá"],["true","Đạt"],["false","Chưa đạt"]]};
+  var v={critA:cur.critA==null?"":String(cur.critA),critB:cur.critB==null?"":String(cur.critB),critC:cur.critC==null?"":String(cur.critC),critD:cur.critD==null?"":String(cur.critD),bonus:cur.bonus,note:cur.note};
+  openDrawer({title:"Đánh giá tháng "+fmtDM(p[1])+" · "+st.name,values:v,fields:[
+    {k:"critA",label:"(a) Nộp báo cáo, kế hoạch đúng hạn (trễ tối đa 1 lần)",type:"select",wide:true,options:yn},
+    {k:"critB",label:"(b) Hoàn thành từ 80% kế hoạch tuần",type:"select",wide:true,options:yn},
+    {k:"critC",label:"(c) Trả lời tin nhắn mới trong 3 giờ (khung 19:00-23:30)",type:"select",wide:true,options:yn},
+    {k:"critD",label:"(d) Không có sai sót nghiêm trọng",type:"select",wide:true,options:yn},
+    {k:"bonus",label:"Khoản bổ sung tháng này (₫)",type:"number",hint:"Đạt đủ (a) đến (d): 1.000.000 ₫ theo hợp đồng giai đoạn đầu"},
+    {k:"note",label:"Nhận xét gửi nhân viên",type:"textarea",rows:5}
+  ],onSave:async function(x){
+    var tb=function(s){return s===""?null:s==="true"};
+    return put("kpi_reviews/"+key,{critA:tb(x.critA),critB:tb(x.critB),critC:tb(x.critC),critD:tb(x.critD),bonus:x.bonus,note:x.note},"Đã lưu đánh giá");
+  }});
+}
+
+/* ---------- cẩm nang và hướng dẫn ---------- */
+var GUIDE=[
+  ["Mỗi ca tối (19:00 đến 23:30)",["Bấm Bắt đầu làm việc ở mục Việc của tôi.","Trả lời tin nhắn mới của người mua trong vòng 3 giờ, theo mẫu Huy đưa. Tin nhận ngoài khung thì trả lời ngay đầu ca kế tiếp.","Kiểm tra đơn chờ xác nhận, chờ lấy hàng, đơn giao trễ.","Xem đơn hủy và đơn hoàn: ghi lý do vào nhật ký việc; khiếu nại, hoàn tiền, đền bù thì chuyển Huy trước khi trả lời.","Đọc đánh giá mới; đánh giá 1 đến 3 sao báo Huy kèm ảnh chụp.","Xem tồn kho các SKU bán chạy, báo trước khi sắp hết.","Shopee Ads: xem chi tiêu và ROAS trong ngày, chỉnh theo hướng dẫn và ngân sách đã duyệt.","Ghi lại đã làm gì vào Nhật ký thực hiện của từng việc, tick xong việc, rồi bấm Kết thúc."]],
+  ["Mỗi tuần",["Đầu tuần: xem số liệu tuần trước (doanh số, đơn, lượt truy cập, tỷ lệ chuyển đổi theo SKU).","Đăng ký campaign, Flash Sale, voucher, combo. Đổi giá hoặc khuyến mãi lớn phải được Huy đồng ý trước.","Tối ưu tiêu đề, từ khóa, ảnh, mô tả cho vài SKU có lượt xem cao nhưng ít đơn.","Trước 12:00 Chủ nhật: nộp Báo cáo tuần trên trang và lên Kế hoạch tuần sau (thêm việc, chọn Kế hoạch tuần sau)."]],
+  ["Mỗi tháng",["Nộp Báo cáo tháng trong 2 ngày sau khi hết tháng làm việc.","Đề xuất ít nhất 2 ý tưởng cải thiện kèm số liệu.","Review ngắn với Huy về kết quả và tiêu chí tháng sau."]],
+  ["Phải hỏi Huy trước khi làm",["Thay đổi lớn về giá bán, chương trình khuyến mãi, ngân sách quảng cáo.","Khiếu nại, hoàn trả, đền bù, hoặc câu hỏi bạn chưa chắc câu trả lời.","Việc ngoài phạm vi (chụp ảnh, kịch bản video, sàn khác...): thỏa thuận mức thưởng trước khi làm."]],
+  ["Tuyệt đối không làm",["Chia sẻ tên đăng nhập, mật khẩu tài khoản shop.","Đổi thông tin ngân hàng, thanh toán, pháp lý của gian hàng; rút hoặc chuyển tiền.","Liên hệ riêng với chủ gian hàng để nhận việc, thỏa thuận phí, nhận quà.","Đưa tên, số điện thoại, địa chỉ người mua, mật khẩu hay thông tin thanh toán vào công cụ AI. Ẩn thông tin cá nhân trước khi phân tích.","Lưu riêng hoặc chia sẻ dữ liệu khách hàng ra ngoài."]],
+  ["Khoản bổ sung 1.000.000 ₫ mỗi tháng (giai đoạn đầu)",["(a) Nộp đủ báo cáo tuần, kế hoạch tuần, báo cáo tháng đúng hạn, trễ không quá 1 lần.","(b) Tự lập kế hoạch tuần và hoàn thành từ 80% (việc chưa xong có lý do báo trước).","(c) Trả lời tin nhắn mới trong 3 giờ trong khung 19:00 đến 23:30.","(d) Không để xảy ra sai sót nghiêm trọng (đăng sai giá, vi phạm chính sách sàn, lộ dữ liệu).","Thời gian online không phải tiêu chí đánh giá; trang chỉ ghi lại để tiện phối hợp."]]
+];
+function vGuide(){
+  return '<p class="note" style="margin:0 0 18px">Cẩm nang vận hành shop cho nhân viên TIMUS. Bấm <button class="btn sm" data-act="tour">Xem hướng dẫn nhanh</button> để xem lại cách dùng trang.</p>'
+   +GUIDE.map(function(g,i){return '<details class="ntg"'+(i<2?" open":"")+'><summary>'+esc(g[0])+'</summary><ul class="gl">'+g[1].map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul></details>'}).join("");
+}
+var HELP={
+  tasks:["Việc của tôi","Mọi việc giao cho bạn hoặc bạn tự tạo đều nằm ở đây, chia theo Quá hạn, Hôm nay, Sắp tới. Tick ô vuông khi xong. Bấm vào tên việc để mở: thêm checklist các bước nhỏ, ghi Nhật ký thực hiện (đã làm gì, kết quả, đang vướng gì). Huy đọc được nhật ký nên không cần nhắn lại."],
+  plan:["Kế hoạch tuần","Trước 12:00 Chủ nhật, tạo các việc cho tuần sau: gõ việc ở ô Thêm việc, chọn Kế hoạch tuần sau. Trong tuần, việc phát sinh thì chọn Việc phát sinh để không tính vào tỷ lệ. Mục tiêu là xong từ 80% việc đã lên kế hoạch."],
+  online:["Bắt đầu và kết thúc làm việc","Bấm Bắt đầu làm việc khi vào ca, bấm Kết thúc khi nghỉ. Trang chỉ ghi lại để Huy biết lúc nào bạn đang trực tuyến và dễ phối hợp. Hợp đồng đánh giá theo kết quả, không theo số giờ."],
+  reports:["Báo cáo","Báo cáo tuần nộp trước 12:00 Chủ nhật, báo cáo tháng trong 2 ngày sau khi hết tháng làm việc. Bấm Viết báo cáo: trang tự điền các việc bạn đã xong và kế hoạch tuần sau, bạn bổ sung số liệu, vấn đề, ý tưởng rồi bấm Nộp báo cáo. Có thể Lưu nháp để viết tiếp. Huy trả lời ngay ở phần Trao đổi bên dưới báo cáo."],
+  notes:["Ghi chú","Ghi lại mẫu trả lời khách, mẹo xử lý, thông tin cần nhớ của shop. Ghi chú chỉ bạn thấy, trừ khi bật Chia sẻ cho cả nhóm TIMUS. Không ghi mật khẩu hay thông tin cá nhân của người mua vào đây."],
+  kpi:["Đánh giá tháng","Bảng theo dõi 4 tiêu chí của khoản bổ sung. (a) và (b) trang tự gợi ý từ báo cáo và kế hoạch tuần bạn làm trên trang. (c), (d) và số tiền do Huy chốt khi review cuối tháng, kèm nhận xét."]
+};
+function helpBtn(k){return '<button class="hlp" type="button" data-act="help" data-id="'+k+'" aria-label="Hướng dẫn">?</button>'}
+var TOUR=[
+  ["Chào mừng bạn đến TIMUS","Đây là trang làm việc của bạn: xem việc, tự lên kế hoạch, ghi nhật ký, nộp báo cáo và trao đổi với Huy. Mất khoảng 1 phút để xem hướng dẫn này.","mine"],
+  ["1. Bắt đầu ca","Mỗi lần vào làm, bấm Bắt đầu làm việc ở đầu trang. Khi nghỉ bấm Kết thúc. Trang chỉ ghi lại để phối hợp, không dùng để chấm điểm.","mine"],
+  ["2. Thêm việc và lên kế hoạch",HELP.plan[1],"mine"],
+  ["3. Làm việc và ghi nhật ký",HELP.tasks[1],"mine"],
+  ["4. Nộp báo cáo",HELP.reports[1],"reports"],
+  ["5. Cẩm nang vận hành","Trang Cẩm nang có checklist mỗi ca tối, mỗi tuần, mỗi tháng, những việc phải hỏi Huy trước và những việc tuyệt đối không làm. Đọc kỹ một lần trước khi bắt đầu.","guide"],
+  ["Sẵn sàng","Bấm dấu ? cạnh mỗi mục để xem lại hướng dẫn, hoặc bấm Hướng dẫn nhanh ở thanh bên trái. Chúc bạn làm việc vui.","mine"]
+];
+var TOUR_I=0;
+function modal(html){var el=$("#tourRoot");if(!el){el=document.createElement("div");el.id="tourRoot";document.body.appendChild(el)}el.innerHTML=html}
+function openTour(i){
+  TOUR_I=Math.max(0,Math.min(TOUR.length-1,i));var st=TOUR[TOUR_I];
+  if(st[2]&&S.view!==st[2]){S.view=st[2];render(true)}
+  modal('<div class="tour-bg"><div class="tour" role="dialog" aria-modal="true" aria-labelledby="tour-t"><div class="dots">'+TOUR.map(function(_,k){return '<i class="'+(k===TOUR_I?"on":"")+'"></i>'}).join("")+'</div><h3 id="tour-t">'+esc(st[0])+'</h3><p>'+esc(st[1])+'</p><div class="acts" style="justify-content:space-between"><button class="btn" data-act="tour-close">'+(TOUR_I===TOUR.length-1?"Đóng":"Bỏ qua")+'</button><div class="acts">'+(TOUR_I?'<button class="btn" data-act="tour-prev">Quay lại</button>':"")+(TOUR_I<TOUR.length-1?'<button class="btn primary" data-act="tour-next">Tiếp</button>':'<button class="btn primary" data-act="tour-close">Bắt đầu làm việc</button>')+'</div></div></div></div>');
+  var b=$(".tour .btn.primary");if(b)b.focus();
+}
+function openHelp(k){var x=HELP[k];if(!x)return;modal('<div class="tour-bg"><div class="tour" role="dialog" aria-modal="true" aria-labelledby="tour-t"><h3 id="tour-t">'+esc(x[0])+'</h3><p>'+esc(x[1])+'</p><div class="acts" style="justify-content:flex-end"><button class="btn primary" data-act="tour-close">Đã hiểu</button></div></div></div>');var b=$(".tour .btn.primary");if(b)b.focus()}
+function closeTour(){var el=$("#tourRoot");if(el)el.innerHTML="";try{localStorage.setItem("timus-tour-1","1")}catch(_){}}
+
 /* ---------- render chính ---------- */
-var R={mine:vMine,overview:vOverview,shops:vShops,staff:vStaff,schedule:vSchedule,tasks:vTasks,performance:vPerformance,clients:vClients};
+var R={mine:vMine,reports:vReports,guide:vGuide,overview:vOverview,shops:vShops,staff:vStaff,schedule:vSchedule,tasks:vTasks,performance:vPerformance,clients:vClients};
 var rafPending=false,deferred=false;
 function isEditing(a){return a&&$("#app").contains(a)&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="search"&&a.dataset.dirty==="1"}
 function schedule(){if(rafPending)return;rafPending=true;requestAnimationFrame(function(){rafPending=false;render(false)})}
@@ -809,6 +1072,7 @@ function render(force){
   if(!force&&isEditing(a)){deferred=true;return}
   var fid=a&&$("#app").contains(a)?a.id:null,ss=null,se=null;
   if(fid){try{ss=a.selectionStart;se=a.selectionEnd}catch(_){}}
+  if(!S.admin&&S.view==="clients")S.view="mine";
   renderSide();
   var allLoaded=["shops","staff","tasks","clients"].every(function(k){return S.loaded[k]});
   $("#app").innerHTML=db&&!allLoaded?'<div class="empty">Đang tải dữ liệu...</div>':R[S.view]();
@@ -860,7 +1124,7 @@ function openDrawer(cfg){
   var v=cfg.values||{};
   $("#drawerRoot").innerHTML='<div class="scrim" data-act="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-title"><header><h3 id="dr-title">'+esc(cfg.title)+'</h3><button class="btn sm" data-act="close">Đóng</button></header>'
    +'<div class="body"><div class="fgrid">'+cfg.fields.map(function(f){return fieldHTML(f,f.src?(f.src[f.k]):v[f.k])}).join("")+'</div>'+(cfg.extra?'<div class="extra">'+cfg.extra+'</div>':"")+'</div>'
-   +'<footer><div class="acts">'+(cfg.onDelete&&!S.readonly&&!cfg.ro?'<button class="btn danger" data-act="dr-del" id="dr-del">Xóa</button>':"")+'</div><div class="acts"><button class="btn" data-act="close">Hủy</button>'+(S.readonly||cfg.ro?"":'<button class="btn primary" data-act="dr-save">Lưu</button>')+'</div></footer></aside>';
+   +'<footer><div class="acts">'+(cfg.onDelete&&!S.readonly&&!cfg.ro?'<button class="btn danger" data-act="dr-del" id="dr-del">Xóa</button>':"")+'</div><div class="acts"><button class="btn" data-act="close">Hủy</button>'+(cfg.buttons||[]).map(function(b){return '<button class="btn '+(b.cls||"")+'" data-act="'+b.act+'">'+esc(b.label)+'</button>'}).join("")+(S.readonly||cfg.ro||cfg.noSave?"":'<button class="btn primary" data-act="dr-save">'+esc(cfg.saveLabel||"Lưu")+'</button>')+'</div></footer></aside>';
   if(cfg.live)cfg.live();
   var first=$(".drawer input,.drawer select,.drawer textarea");if(first)first.focus();
 }
@@ -872,7 +1136,7 @@ async function saveDrawer(){
   if(!ok){toast("Điền các ô có dấu *");return}
   var btn=$('[data-act="dr-save"]');if(btn){btn.disabled=true;btn.textContent="Đang lưu..."}
   var done=await drawer.onSave(vals);
-  if(done!==false)closeDrawer();else if(btn){btn.disabled=false;btn.textContent="Lưu"}
+  if(done!==false)closeDrawer();else if(btn){btn.disabled=false;btn.textContent=(drawer&&drawer.saveLabel)||"Lưu"}
 }
 function split(vals,keys){var a={},b={};Object.keys(vals).forEach(function(k){(keys.indexOf(k)>=0?b:a)[k]=vals[k]});return [a,b]}
 
@@ -1133,6 +1397,21 @@ document.addEventListener("click",async function(e){
     case "edit-client":clientForm(byId(S.clients,id));return;
     case "settings":settingsForm();return;
     case "signout":if(window.TIMUS_AUTH)TIMUS_AUTH.signOut();return;
+    case "help":openHelp(id);return;
+    case "tour":openTour(0);return;
+    case "tour-next":openTour(TOUR_I+1);return;
+    case "tour-prev":openTour(TOUR_I-1);return;
+    case "tour-close":closeTour();return;
+    case "online":toggleOnline();return;
+    case "new-report":reportForm(null,id);return;
+    case "edit-report":reportForm(byId(S.reports,id));return;
+    case "rep-draft":if(drawer){drawer.mode="draft";saveDrawer()}return;
+    case "rep-submit":if(drawer){drawer.mode="submit";saveDrawer()}return;
+    case "rep-reviewed":if(drawer){drawer.mode="reviewed";saveDrawer()}return;
+    case "rc-add":addRepComment();return;
+    case "kpi":kpiForm(id);return;
+    case "go-reports":go("reports");return;
+    case "rep-filter":S.f.rep=id;render(true);return;
     case "add-note":noteForm();return;
     case "edit-note":noteForm(byId(S.notes,id));return;
     case "tick":toggleDone(id,t.checked);return;
@@ -1157,6 +1436,7 @@ document.addEventListener("click",async function(e){
 });
 document.addEventListener("keydown",function(e){
   if(e.key==="Enter"&&e.target.id==="cl-new"){e.preventDefault();clChange("add");return}
+  if(e.key==="Escape"&&$("#tourRoot")&&$("#tourRoot").innerHTML){closeTour();return}
   if(e.key==="Escape"){if(!$("#pop").hidden)closePop();else if(drawer)closeDrawer();return}
   if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr.click,.card,.pcard")){e.preventDefault();e.target.click()}
 });
@@ -1172,7 +1452,7 @@ document.addEventListener("change",async function(e){
   var t=e.target;
   var m={"fs-market":["shop","market"],"fs-platform":["shop","platform"],"fs-status":["shop","status"],"fs-staff":["shop","staff"],"ft-staff":["task","staff"],"ft-shop":["task","shop"]}[t.id];
   if(m){S.f[m[0]][m[1]]=t.value;render(true);return}
-  var qa={"qa-shop":"shop","qa-prio":"prio","qa-due":"due"}[t.id];if(qa){S.qa[qa]=t.value;return}
+  var qa={"qa-shop":"shop","qa-prio":"prio","qa-due":"due","qa-plan":"plan"}[t.id];if(qa){S.qa[qa]=t.value;return}
   if(t.id==="perfMonth"&&t.value){S.month=t.value;watchMonth();render(true);return}
   if(t.dataset.metric){t.dataset.dirty="";saveMetric(t);return}
   if(t.dataset.task){
@@ -1202,7 +1482,8 @@ function mapCol(name,key){
   }
   if(!R[h])S.view=S.admin?"overview":"mine";
   render(true);
-  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");
+  try{if(!S.admin&&!localStorage.getItem("timus-tour-1"))setTimeout(function(){openTour(0)},600)}catch(_){}
+  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");col("reports","reports");col("report_comments","repComments");col("work_sessions","sessions");col("kpi_reviews","kpi");
   db.doc("settings/app").onSnapshot(function(s){S.settings=s.exists?Object.assign({},s.data()):{};schedule()},function(){});
   var tw=weekStart(todayVN());watchWeek(tw);watchWeek(addDays(tw,-7));watchWeek(S.week);
   watchMonth();

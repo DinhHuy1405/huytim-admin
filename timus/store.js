@@ -14,7 +14,7 @@
     if (code === "42501" || code === "PGRST301" || code === "denied") return { code: "invalid_argument", message: (e && e.message) || "Không có quyền" };
     if (code === "23503") return { code: "conflict_ref", message: "Còn dữ liệu khác đang liên kết tới mục này" };
     if (code === "23505") return { code: "conflict_dup", message: "Trùng với dữ liệu đã có" };
-    if (code === "23514" || code === "22P02" || code === "22007") return { code: "bad_value", message: (e && e.message) || "Giá trị không hợp lệ" };
+    if (code === "23514" || code === "23502" || code === "22P02" || code === "22007") return { code: "bad_value", message: (e && e.message) || "Giá trị không hợp lệ" };
     return { code: "unavailable", message: (e && e.message) || "Lỗi kết nối" };
   }
   function must(res) { if (res.error) throw wrapErr(res.error); return res.data; }
@@ -29,21 +29,29 @@
     staff: { name: "name", role: "role_title", market: "market", status: "status", phone: "phone", email: "email", chat: "chat",
       startDate: "start_date", defaultShift: "default_shift", platforms: "platforms", uid: "login_email", notes: "notes" },
     tasks: { title: "title", shopId: "shop_id", assigneeId: "assignee_id", type: "task_type", priority: "priority", due: "due_date",
-      status: "status", notes: "notes", reviewSince: "review_since", doneAt: "done_at", checklist: "checklist", createdBy: "created_by" },
+      status: "status", notes: "notes", reviewSince: "review_since", doneAt: "done_at", checklist: "checklist", createdBy: "created_by", planWeek: "plan_week" },
     task_notes: { taskId: "task_id", author: "author_email", body: "body" },
     notes: { author: "author_email", shopId: "shop_id", title: "title", body: "body", pinned: "pinned", shared: "shared" },
+    reports: { author: "author_email", kind: "kind", periodStart: "period_start", periodEnd: "period_end", shopId: "shop_id", summary: "summary",
+      numbers: "numbers", issues: "issues", ideas: "ideas", ideasCount: "ideas_count", nextPlan: "next_plan", status: "status",
+      submittedAt: "submitted_at", reviewedAt: "reviewed_at" },
+    report_comments: { reportId: "report_id", author: "author_email", body: "body" },
+    work_sessions: { author: "author_email", startedAt: "started_at", endedAt: "ended_at", note: "note" },
+    kpi_reviews: { critA: "crit_a", critB: "crit_b", critC: "crit_c", critD: "crit_d", bonus: "bonus", note: "note" },
     clients: { name: "name", contactName: "contact_name", phone: "phone", email: "email", status: "status", contractStart: "contract_start", notes: "notes" },
     staff_pay: { salary: "salary", allowance: "allowance", commission: "commission", payNote: "pay_note" },
     client_terms: { feeMode: "fee_mode", customFixed: "custom_fixed", bonusFirst: "bonus_first", bonusAfter: "bonus_after", termsNote: "terms_note" },
     shop_metrics: { orders: "orders", gmv: "gmv", netSales: "net_sales", adSpend: "ad_spend", adSales: "ad_sales", violation: "violation_rate", ontime: "ontime_rate" },
     settings: { fx: "fx_rate", overload: "overload_limit" }
   };
+  /* cột chữ bắt buộc có giá trị: ô trống gửi chuỗi rỗng thay vì null */
+  var NOT_NULL_TEXT = { reports: ["summary", "issues", "ideas", "next_plan"], notes: ["body"] };
   function toRow(table, obj) {
-    var m = MAPS[table], r = {};
+    var m = MAPS[table], r = {}, keep = NOT_NULL_TEXT[table] || [];
     Object.keys(m).forEach(function (k) {
       if (!(k in obj)) return;
       var v = obj[k];
-      if (v === "" || v === undefined) v = null;
+      if (v === "" || v === undefined) v = keep.indexOf(m[k]) >= 0 ? "" : null;
       if (k === "uid" && v) v = String(v).toLowerCase();
       r[m[k]] = v;
     });
@@ -57,9 +65,10 @@
     return o;
   }
   /* đọc ghi qua view public.timus_* (security_invoker, RLS của bảng gốc vẫn áp dụng) */
+  var GEN = ["staff", "tasks", "clients", "task_notes", "notes", "reports", "report_comments", "work_sessions"];
   function T(name) { return sb.from("timus_" + name); }
   function C(name) { return sb.from("core_" + name); }
-  var PK = { shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
+  var PK = { kpi_reviews: "staff_id,month_start", reports: "id", report_comments: "id", work_sessions: "id", shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
   function up(name, rows) { return T(name).upsert(rows, { onConflict: PK[name] }); }
 
   /* ---------- ảnh chụp dữ liệu giống claude db ---------- */
@@ -95,11 +104,12 @@
       sup.forEach(function (s) { (by[s.shop_id] = by[s.shop_id] || []).push(s.staff_id); });
       return shops.map(function (row) { var o = fromRow("shops", row); o.supportIds = by[row.id] || []; return { id: row.id, data: o }; });
     }
-    if (name === "staff" || name === "tasks" || name === "clients" || name === "task_notes" || name === "notes") {
+    if (GEN.indexOf(name) >= 0) {
       return must(await T(name).select("*")).map(function (row) { return { id: row.id, data: fromRow(name, row) }; });
     }
     if (name === "secure/hr/pay") return must(await T("staff_pay").select("*")).map(function (row) { return { id: row.staff_id, data: fromRow("staff_pay", row) }; });
     if (name === "secure/biz/terms") return must(await T("client_terms").select("*")).map(function (row) { return { id: row.client_id, data: fromRow("client_terms", row) }; });
+    if (name === "kpi_reviews") return must(await T("kpi_reviews").select("*")).map(function (row) { var o = fromRow("kpi_reviews", row); o.staffId = row.staff_id; o.month = String(row.month_start).slice(0, 10); return { id: row.staff_id + "__" + o.month, data: o }; });
     if (name === "metrics") {
       var q = T("shop_metrics").select("*");
       if (where && where.month) q = q.eq("month", where.month + "-01");
@@ -107,7 +117,7 @@
     }
     throw { code: "invalid_argument", message: "Không có bảng " + name };
   }
-  var TABLES_OF = { shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
+  var TABLES_OF = { shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], reports: ["reports"], report_comments: ["report_comments"], work_sessions: ["work_sessions"], kpi_reviews: ["kpi_reviews"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
 
   function addDays(s, k) { var a = s.split("-").map(Number); return new Date(Date.UTC(a[0], a[1] - 1, a[2] + k)).toISOString().slice(0, 10); }
   async function loadWeek(w) {
@@ -131,13 +141,17 @@
       if (want.length) must(await T("shop_support").insert(want.map(function (s) { return { shop_id: id, staff_id: s }; })));
       bump("shops"); return;
     }
-    if (col === "staff" || col === "tasks" || col === "clients" || col === "task_notes" || col === "notes") {
+    if (GEN.indexOf(col) >= 0) {
       var r2 = toRow(col, obj); r2.id = id;
       denyIfEmpty(must(await up(col, r2).select("id")));
       bump(col); return;
     }
     if (col === "secure/hr/pay") { var p = toRow("staff_pay", obj); p.staff_id = id; denyIfEmpty(must(await up("staff_pay", p).select("staff_id"))); bump("staff_pay"); return; }
     if (col === "secure/biz/terms") { var t = toRow("client_terms", obj); t.client_id = id; if (!t.fee_mode) t.fee_mode = "standard"; denyIfEmpty(must(await up("client_terms", t).select("client_id"))); bump("client_terms"); return; }
+    if (col === "kpi_reviews") {
+      var kp = id.split("__"), k = toRow("kpi_reviews", obj); k.staff_id = kp[0]; k.month_start = kp[1];
+      denyIfEmpty(must(await up("kpi_reviews", k).select("staff_id"))); bump("kpi_reviews"); return;
+    }
     if (col === "metrics") {
       var parts = id.split("__"), m = toRow("shop_metrics", obj);
       m.shop_id = parts[0]; m.month = parts[1] + "-01";
@@ -152,7 +166,7 @@
     throw { code: "invalid_argument", message: "Không ghi được vào " + col };
   }
   async function delDoc(col, id) {
-    var map = { shops: ["shops", "id"], staff: ["staff", "id"], tasks: ["tasks", "id"], clients: ["clients", "id"], task_notes: ["task_notes", "id"], notes: ["notes", "id"], "secure/hr/pay": ["staff_pay", "staff_id"], "secure/biz/terms": ["client_terms", "client_id"] };
+    var map = { shops: ["shops", "id"], staff: ["staff", "id"], tasks: ["tasks", "id"], clients: ["clients", "id"], task_notes: ["task_notes", "id"], notes: ["notes", "id"], reports: ["reports", "id"], report_comments: ["report_comments", "id"], work_sessions: ["work_sessions", "id"], "secure/hr/pay": ["staff_pay", "staff_id"], "secure/biz/terms": ["client_terms", "client_id"] };
     var m = map[col]; if (!m) throw { code: "invalid_argument", message: "Không xóa được" };
     var rows = must(await T(m[0]).delete().eq(m[1], id).select(m[1]));
     if (!rows.length && col !== "secure/hr/pay" && col !== "secure/biz/terms") {
