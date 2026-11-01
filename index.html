@@ -36,14 +36,14 @@ a.biz:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 div.biz{color:var(--soft)}
 .note{color:var(--soft);font-size:13px;margin-top:24px}
 </style>
-<link rel="stylesheet" href="theme.css?v=5">
+<link rel="stylesheet" href="theme.css?v=8">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
 <div class="wrap">
-  <header class="bar"><h1>Trang chủ <span class="cnt">5</span></h1></header>
+  <header class="bar"><h1>Trang chủ <span class="cnt">6</span></h1></header>
   <div class="stats">
-    <div class="stat"><div class="l">Đang chạy</div><div class="v">3</div></div>
+    <div class="stat"><div class="l">Đang chạy</div><div class="v">4</div></div>
     <div class="stat"><div class="l">Trang riêng</div><div class="v">1</div></div>
     <div class="stat"><div class="l">Sắp gắn</div><div class="v">1</div></div>
   </div>
@@ -53,13 +53,14 @@ div.biz{color:var(--soft)}
       <tr class="biz-row" data-href="viec/"><td><a href="viec/"><i class="dot" style="background:var(--faint)"></i>To do</a></td><td class="t2">Mọi việc của Huy ở một chỗ, chia 3 cột Todo, Doing, Done. Các chat tạo việc thẳng vào đây.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Chủ hệ thống</td></tr>
       <tr class="biz-row" data-href="timus/"><td><a href="timus/"><i class="dot" style="background:var(--faint)"></i>TIMUS Vận hành</a></td><td class="t2">Shop Shopee, Lazada, TikTok Shop, Amazon tại Việt Nam và Mỹ: nhân viên, lịch ca, công việc, số liệu, phí khách hàng.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Email được cấp quyền</td></tr>
       <tr class="biz-row" data-href="khach/"><td><a href="khach/"><i class="dot" style="background:var(--faint)"></i>TIMUS Customers</a></td><td class="t2">Mỗi khách hàng một tab: giai đoạn, yêu cầu, tiến độ và bước tiếp theo.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Admin TIMUS</td></tr>
+      <tr class="biz-row" data-href="content/"><td><a href="content/"><i class="dot" style="background:var(--faint)"></i>Content</a></td><td class="t2">Kho video, format, lệnh tạo video, số liệu TikTok và các highlight để cải thiện video.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Chủ hệ thống</td></tr>
       <tr class="biz-row" data-href="https://mentor.huytim.com"><td><a href="https://mentor.huytim.com" target="_blank" rel="noopener"><i class="dot" style="background:var(--faint)"></i>Academy</a></td><td class="t2">Theo dõi học viên mentor Việt Nam và US, lịch họp, tài liệu.</td><td><span class="tg">Trang riêng</span></td><td class="t2">Mentor và học viên</td></tr>
       <tr><td class="t1" style="color:var(--soft)">Landing</td><td class="t2">Công cụ tính giá, phí sàn, phí ship trên huytim.com.</td><td><span class="tg">Sắp gắn</span></td><td class="t2">Chưa áp dụng</td></tr>
     </tbody>
   </table></div>
   <p class="note">Dữ liệu lưu trên Supabase của Huy Tim. Mỗi người chỉ thấy business mình được cấp quyền.</p>
 </div>
-<script src="shell.js?v=2"></script>
+<script src="shell.js?v=4"></script>
 <script>
 HT.render({base:"",active:"home"});
 document.addEventListener("click",function(e){var r=e.target.closest(".biz-row");if(r&&!e.target.closest("a")){var u=r.dataset.href;if(/^https/.test(u))window.open(u,"_blank","noopener");else location.href=u}});

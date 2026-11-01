@@ -73,6 +73,7 @@
     if (o.owner !== false) chung.push({ label: "To do", href: base + "viec/", icon: "check", current: o.active === "viec" });
     var biz = [{ label: "TIMUS Vận hành", href: base + "timus/", dot: "#9CA3B0", current: o.active === "timus" && !o.groups }];
     if (o.admin !== false) biz.push({ label: "TIMUS Customers", href: base + "khach/", dot: "#9CA3B0", current: o.active === "khach" });
+    if (o.owner !== false) biz.push({ label: "Content", href: base + "content/", dot: "#9CA3B0", current: o.active === "content" });
     biz.push({ label: "Academy", href: "https://mentor.huytim.com", dot: "#9CA3B0", ext: true });
     biz.push({ label: "Landing", disabled: true, badge: "Sắp gắn" });
     var all = [{ key: "chung", label: "Menu", items: chung }].concat(o.groups || []).concat([{ key: "biz", label: "Business", items: biz }]);

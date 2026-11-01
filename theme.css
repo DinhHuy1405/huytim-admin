@@ -105,7 +105,7 @@ header.bar h1 .cnt{font-weight:400;color:var(--faint);font-size:14px;margin-left
 .stat .v{order:1;padding:10px 12px 10px;font-size:21px;font-weight:500;letter-spacing:-.025em;line-height:1.25;font-variant-numeric:tabular-nums}
 .stat .d{order:2;margin-top:-6px;padding:0 12px 10px;font-size:12px;color:var(--soft);white-space:nowrap}
 .stat .d b{font-weight:600;color:var(--ink)}.stat .d b.dn{color:var(--bad)}
-.stat .spark{position:absolute;right:12px;bottom:12px;width:60px;height:20px;overflow:visible}
+.stat .spark{position:absolute;right:12px;top:42px;width:60px;height:20px;overflow:visible}
 .spark path{fill:none;stroke:var(--spark);stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
 .stat.bad .v{color:var(--bad-num)}.stat.warn .v,.stat.ok .v{color:var(--ink)}
 

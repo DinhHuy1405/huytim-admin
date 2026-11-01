@@ -307,7 +307,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 @media (max-width:640px){.filters input[type=search]{width:100%}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lbar{grid-column:1/-1;grid-row:2}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=7">
+<link rel="stylesheet" href="../theme.css?v=8">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -327,7 +327,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 <script src="config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="store.js?v=10"></script>
-<script src="../shell.js?v=3"></script>
+<script src="../shell.js?v=4"></script>
 <script>
 (function(){
 "use strict";
@@ -1276,7 +1276,7 @@ function dInsights(d,sum){
 }
 function fmtHms(sec){var h=Math.floor(sec/3600),m=Math.round(sec%3600/60);return (h?h+" giờ ":"")+m+" phút"}
 function dChart(rows,ci,oi,label,type){
-  var W=900,H=250,L=46,R0=type==="bar"?8:24,T=10,B=24,n=rows.length;
+  var W=900,H=250,L=innerWidth<560?96:46,R0=type==="bar"?8:24,T=10,B=24,n=rows.length;
   var max=Math.max.apply(null,rows.map(function(r){return r[ci]||0}))||1,step=Math.pow(10,Math.floor(Math.log10(max)))/2;while(max/step>4)step*=2;var top=Math.ceil(max/step)*step;
   var sw=(W-L-R0)/n,x=type==="bar"?function(i){return L+sw*(i+.5)}:function(i){return L+(W-L-R0)*(n<2?.5:i/(n-1))},y=function(v){return T+(H-T-B)*(1-v/top)};
   var g="";for(var v=0;v<=top+1;v+=step)g+='<line x1="'+L+'" x2="'+(W-R0)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(L-10)+'" y="'+(y(v)+4)+'" text-anchor="end">'+(v?tr(v).replace(" tr","tr"):"0")+'</text>';
