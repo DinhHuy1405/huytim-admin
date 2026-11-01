@@ -243,7 +243,7 @@ details.inp>summary:hover{background:var(--hover);color:var(--ink)}
 details.inp>.inner{padding:2px 8px 8px}
 details.inp .qa,details.inp .add,details.inp .logadd{margin:0;border:0;padding:0}
 .tlist{display:flex;flex-direction:column;margin-bottom:24px}
-.tl{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}
+.tl{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}
 .tl:hover{background:var(--hover)}
 .tl .tick,.cl-i input{width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--accent)}
 .tl-b{min-width:0;cursor:pointer}
@@ -334,7 +334,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 "use strict";
 /* ---------- danh mục ---------- */
 /* nhân viên chỉ thấy các trang này; muốn bật lại Báo cáo thì thêm "reports" */
-var STAFF_VIEWS=["mine","logs","guide"];
+var STAFF_VIEWS=["mine","logs","dashboard","guide"];
 var VIEWS=[["mine","Việc của tôi"],["logs","Nhật ký"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["dashboard","Dashboard"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["clients","Khách hàng"]];
 var PF={shopee:"Shopee",lazada:"Lazada",tiktok:"TikTok Shop",amazon:"Amazon",shopify:"Shopify",ebay:"eBay",other:"Sàn khác"};
 var MK={VN:"Việt Nam",US:"Mỹ"};
@@ -789,13 +789,15 @@ function myTasks(){var m=me(),e=S.myId;return S.tasks.filter(function(x){return 
 function clProg(x){var c=x.checklist||[];if(!c.length)return "";var d=c.filter(function(i){return i.done}).length;return '<span class="pill '+(d===c.length?"ok":"mute")+'">'+d+'/'+c.length+' bước</span>'}
 function fmtTime(ms){if(!ms)return "";var p=partsIn(TZ.VN,new Date(ms));return p.hour+":"+p.minute+" · "+p.day+"/"+p.month}
 function authorName(email){for(var i=0;i<S.staff.length;i++)if(S.staff[i].uid&&S.staff[i].uid===email)return S.staff[i].name;return email||""}
+/* nhân viên chỉ xóa được việc tự thêm, việc Huy giao thì không (theo RLS của tasks) */
+function canDelTask(x){return !S.readonly&&(S.admin||x.createdBy===S.myId)}
 function taskLine(x,t){
   var late=x.due&&x.due<t&&x.status!=="done";
   var nlog=S.taskNotes.filter(function(n){return n.taskId===x.id}).length;
   var st=(TASK_ST.filter(function(s){return s[0]===(x.status||"todo")})[0]||["",""])[1];
   var meta=[S.admin?(x.shopId?esc(shopName(x.shopId)):"Việc chung"):"",S.admin?esc(st):"",x.due?'<span class="'+(late?"late":"")+'">Hạn '+fmtDM(x.due)+(late?", trễ "+daysBetween(x.due,t)+" ngày":"")+'</span>':"",nlog?nlog+" ghi chép":""].filter(Boolean).join(" · ");
   return '<div class="tl'+(x.status==="done"?" done":"")+'"><input type="checkbox" class="tick" data-act="tick" data-id="'+x.id+'"'+(x.status==="done"?" checked":"")+(S.readonly?" disabled":"")+' aria-label="Đánh dấu xong: '+esc(x.title)+'">'
-    +'<div class="tl-b" data-act="edit-task" data-id="'+x.id+'" tabindex="0"><div class="t1">'+esc(x.title)+'</div><div class="t2">'+meta+'</div></div>'+clProg(x)+(S.admin?pill(PRIO[x.priority||"normal"]):"")+'</div>';
+    +'<div class="tl-b" data-act="edit-task" data-id="'+x.id+'" tabindex="0"><div class="t1">'+esc(x.title)+'</div><div class="t2">'+meta+'</div></div>'+clProg(x)+(S.admin?pill(PRIO[x.priority||"normal"]):"")+(canDelTask(x)?'<button class="x" type="button" data-act="task-del" data-id="'+x.id+'" aria-label="Xóa việc: '+esc(x.title)+'">'+(S.armDel===x.id?'<span class="t2">Xóa?</span>':"×")+'</button>':"")+'</div>';
 }
 function noteCard(n){
   var title=n.title||(n.body||"").split("\n")[0]||"Ghi chú không tiêu đề";
@@ -1270,7 +1272,7 @@ function closeTour(){var el=$("#tourRoot");if(el)el.innerHTML="";try{localStorag
 /* ---------- vẽ: dashboard shop ---------- */
 function vi(n,d){return Number(n||0).toLocaleString("vi-VN",{maximumFractionDigits:d==null?0:d})}
 function tr(n){return vi(n/1e6,1)+" tr"}
-function dRep(){var l=S.shopReports.slice().sort(function(a,b){return a.periodEnd<b.periodEnd?1:-1});return {list:l,r:byId(l,S.dash.report)||l[0]||null}}
+function dRep(){var m=me(),l=S.shopReports.filter(function(x){var s=byId(S.shops,x.shopId);return S.admin||(m&&s&&(s.ownerId===m.id||(s.supportIds||[]).indexOf(m.id)>=0))}).sort(function(a,b){return a.periodEnd<b.periodEnd?1:-1});return {list:l,r:byId(l,S.dash.report)||l[0]||null}}
 function dInsights(d,sum){
   var A=[],adsS=d.ads.reduce(function(a,x){return a+x[1]},0),adsC=d.ads.reduce(function(a,x){return a+x[4]},0);
   var p=d.summary.p,cr=p.orders?p.cancelled/p.orders*100:0;
@@ -1556,7 +1558,7 @@ function taskForm(x,presetShop){
     stamp(d,x.status);
     return put("tasks/"+id,d);
   },
-  onDelete:x.id?async function(){var ok=await del("tasks/"+x.id);if(ok)toast("Đã xóa việc");return ok}:null});
+  onDelete:x.id&&canDelTask(x)?async function(){var ok=await del("tasks/"+x.id);if(ok)toast("Đã xóa việc");return ok}:null});
 }
 function stamp(d,prev){var t=todayVN();if(d.status==="done"&&prev!=="done")d.doneAt=t;if(d.status!=="done")delete d.doneAt;if(d.status==="review"&&prev!=="review")d.reviewSince=t;if(d.status!=="review")delete d.reviewSince}
 function clientForm(c){
@@ -1730,6 +1732,9 @@ document.addEventListener("click",async function(e){
     case "add-note":noteForm();return;
     case "edit-note":noteForm(byId(S.notes,id));return;
     case "tick":toggleDone(id,t.checked);return;
+    case "task-del":
+      if(S.armDel!==id){S.armDel=id;render(true);setTimeout(function(){if(S.armDel===id){S.armDel=null;render(true)}},4000);return}
+      S.armDel=null;if(await del("tasks/"+id))toast("Đã xóa việc");return;
     case "cl-toggle":clChange("toggle",+t.dataset.i);return;
     case "cl-del":clChange("del",+t.dataset.i);return;
     case "cl-add":clChange("add");return;
