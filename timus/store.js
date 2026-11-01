@@ -300,24 +300,17 @@
         '<label class="f">Email<input id="loginemail" type="email" required autocomplete="username"></label>' +
         '<label class="f">Mật khẩu<input id="loginpw" type="password" autocomplete="current-password"></label>' +
         '<button class="btn primary" id="loginbtn" type="submit">Đăng nhập</button>' +
-        '<button class="btn" id="linkbtn" type="button">Gửi link đăng nhập qua email</button>' +
         '<p id="loginmsg" role="status"></p></form>');
       var msg = box.querySelector("#loginmsg");
       var email = function () { return box.querySelector("#loginemail").value.trim(); };
       box.querySelector("#loginform").addEventListener("submit", async function (e) {
         e.preventDefault();
         var pw = box.querySelector("#loginpw").value;
-        if (!pw) { msg.textContent = "Nhập mật khẩu, hoặc bấm Gửi link đăng nhập qua email."; return; }
+        if (!pw) { msg.textContent = "Nhập mật khẩu."; return; }
         box.querySelector("#loginbtn").disabled = true; msg.textContent = "Đang đăng nhập...";
         var res = await sb.auth.signInWithPassword({ email: email(), password: pw });
         box.querySelector("#loginbtn").disabled = false;
-        if (res.error) msg.textContent = "Sai email hoặc mật khẩu. Thử lại, hoặc dùng link đăng nhập qua email.";
-      });
-      box.querySelector("#linkbtn").addEventListener("click", async function () {
-        if (!email()) { msg.textContent = "Nhập email trước."; return; }
-        msg.textContent = "Đang gửi...";
-        var res = await sb.auth.signInWithOtp({ email: email(), options: { emailRedirectTo: location.origin + location.pathname, shouldCreateUser: true } });
-        msg.textContent = res.error ? "Chưa gửi được: " + res.error.message : "Đã gửi. Mở email và bấm vào link để vào trang.";
+        if (res.error) msg.textContent = "Sai email hoặc mật khẩu.";
       });
       sb.auth.onAuthStateChange(function (ev, session) { if (session) setTimeout(function () { box.remove(); resolve(session); }, 0); });
     });
