@@ -233,6 +233,7 @@ html,body{margin:0}
 .qa{display:grid;grid-template-columns:minmax(0,1fr) 170px 150px 100px 160px auto;gap:6px;margin:0 0 28px;padding:8px;border:1px solid var(--line);border-radius:6px}
 .qa input,.qa select{border:1px solid var(--line2);border-radius:4px;padding:6px 9px;min-width:0;background:#fff;font-size:14.5px}
 @media (max-width:760px){.qa{grid-template-columns:1fr 1fr}.qa #qa-title{grid-column:1/-1}}
+.qa.qa1{grid-template-columns:minmax(0,1fr) auto;margin-bottom:16px}.qa.qa1 #qa-title{grid-column:auto;padding:10px 12px}
 details.inp{margin:0 0 14px;border:1px solid var(--line);border-radius:6px}
 details.inp>summary{cursor:pointer;padding:7px 10px;font-size:14px;color:var(--soft);list-style:none;border-radius:6px}
 details.inp>summary::-webkit-details-marker{display:none}
@@ -792,9 +793,9 @@ function taskLine(x,t){
   var late=x.due&&x.due<t&&x.status!=="done";
   var nlog=S.taskNotes.filter(function(n){return n.taskId===x.id}).length;
   var st=(TASK_ST.filter(function(s){return s[0]===(x.status||"todo")})[0]||["",""])[1];
-  var meta=[x.shopId?esc(shopName(x.shopId)):"Việc chung",esc(st),x.due?'<span class="'+(late?"late":"")+'">Hạn '+fmtDM(x.due)+(late?", trễ "+daysBetween(x.due,t)+" ngày":"")+'</span>':"",nlog?nlog+" ghi chép":""].filter(Boolean).join(" · ");
+  var meta=[S.admin?(x.shopId?esc(shopName(x.shopId)):"Việc chung"):"",S.admin?esc(st):"",x.due?'<span class="'+(late?"late":"")+'">Hạn '+fmtDM(x.due)+(late?", trễ "+daysBetween(x.due,t)+" ngày":"")+'</span>':"",nlog?nlog+" ghi chép":""].filter(Boolean).join(" · ");
   return '<div class="tl'+(x.status==="done"?" done":"")+'"><input type="checkbox" class="tick" data-act="tick" data-id="'+x.id+'"'+(x.status==="done"?" checked":"")+(S.readonly?" disabled":"")+' aria-label="Đánh dấu xong: '+esc(x.title)+'">'
-    +'<div class="tl-b" data-act="edit-task" data-id="'+x.id+'" tabindex="0"><div class="t1">'+esc(x.title)+'</div><div class="t2">'+meta+'</div></div>'+clProg(x)+pill(PRIO[x.priority||"normal"])+'</div>';
+    +'<div class="tl-b" data-act="edit-task" data-id="'+x.id+'" tabindex="0"><div class="t1">'+esc(x.title)+'</div><div class="t2">'+meta+'</div></div>'+clProg(x)+(S.admin?pill(PRIO[x.priority||"normal"]):"")+'</div>';
 }
 function noteCard(n){
   var title=n.title||(n.body||"").split("\n")[0]||"Ghi chú không tiêu đề";
@@ -813,9 +814,11 @@ function vMine(){
   var h="";
   h+=wkBox(m,t);
   if(!m)h+='<div class="banner">Tài khoản '+esc(S.myId||"")+' chưa gắn với hồ sơ nhân viên nào, nên ở đây chỉ hiện việc do chính bạn tạo. Nhờ admin điền email này vào ô Email đăng nhập trong hồ sơ nhân viên.</div>';
-  h+='<div class="stats">'+stat(open.length,"việc đang mở")+stat(groups[0][1].length,"việc quá hạn",groups[0][1].length?"bad":"ok")+stat(groups[1][1].length,"việc hạn hôm nay",groups[1][1].length?"warn":"")+(S.admin?stat(myShops.length,"shop đang phụ trách"):"")+stat(sh?esc(sh.label):"Chưa xếp","ca hôm nay"+(sh&&sh.s?" ("+sh.s+"-"+sh.e+")":""))+'</div>';
+  if(!S.admin)groups=[["Việc cần làm",open]];
+  if(S.admin)h+='<div class="stats">'+stat(open.length,"việc đang mở")+stat(groups[0][1].length,"việc quá hạn",groups[0][1].length?"bad":"ok")+stat(groups[1][1].length,"việc hạn hôm nay",groups[1][1].length?"warn":"")+(S.admin?stat(myShops.length,"shop đang phụ trách"):"")+stat(sh?esc(sh.label):"Chưa xếp","ca hôm nay"+(sh&&sh.s?" ("+sh.s+"-"+sh.e+")":""))+'</div>';
   if(S.admin)h+=workPanel(m,t);
-  if(!S.readonly){
+  if(!S.readonly&&!S.admin)h+='<form class="qa qa1" id="qa"><input id="qa-title" placeholder="Gõ việc rồi bấm Enter" aria-label="Việc mới" autocomplete="off" value="'+esc(S.qa.title)+'"><button class="btn primary" type="submit">Thêm</button></form>';
+  if(!S.readonly&&S.admin){
     var shopChoices=(myShops.length?myShops:S.shops.filter(function(s){return s.status!=="stopped"}));
     h+='<details class="inp" data-key="qa"'+(S.qaOpen?" open":"")+'><summary>Thêm việc mới</summary><div class="inner"><form class="qa" id="qa"><input id="qa-title" placeholder="Thêm việc mới, ví dụ: Trả lời 12 tin nhắn tồn" aria-label="Việc mới" autocomplete="off" value="'+esc(S.qa.title)+'">'
       +'<select id="qa-shop" aria-label="Shop">'+opt("","Việc chung",S.qa.shop)+shopChoices.map(function(s){return opt(s.id,s.name,S.qa.shop)}).join("")+'</select>'
@@ -827,7 +830,7 @@ function vMine(){
   h+=S.admin?'<div class="cols2"><section>':'<section>';
   var any=false;
   groups.forEach(function(g){if(!g[1].length)return;h+='<h2 class="sec">'+g[0]+(any?"":helpBtn("tasks"))+'<span>'+g[1].length+' việc</span></h2>';any=true;h+='<div class="tlist">'+g[1].sort(byDue).map(function(x){return taskLine(x,t)}).join("")+'</div>'});
-  if(!any)h+='<h2 class="sec">Việc cần làm</h2><div class="empty">Chưa có việc nào đang mở. Bấm Thêm việc mới ở phía trên để bắt đầu.</div>';
+  if(!any)h+='<h2 class="sec">Việc cần làm</h2><div class="empty">Chưa có việc nào đang mở. Thêm việc ở ô phía trên.</div>';
   if(done.length)h+='<details class="dn"><summary>Đã xong 7 ngày qua ('+done.length+')</summary><div class="tlist">'+done.map(function(x){return taskLine(x,t)}).join("")+'</div></details>';
   if(!S.admin)return h+'</section>';
   var mine=S.notes.filter(function(n){return n.author===S.myId}).sort(function(a,b){return (b.pinned-a.pinned)||((b.updatedAt||0)-(a.updatedAt||0))});
@@ -843,8 +846,10 @@ async function quickAdd(){
   var title=(S.qa.title||"").trim();if(!title){toast("Gõ việc cần làm trước");var el=$("#qa-title");if(el)el.focus();return}
   var m=me(),id=newId("tasks");
   var W=weekStart(todayVN()),pl=S.admin?S.qa.plan:"",pw=pl==="this"?W:pl==="next"?addDays(W,7):"";
-  var due=S.qa.due||todayVN();if(pw&&due<pw)due=pw;
-  var ok=await put("tasks/"+id,{title:title,shopId:S.qa.shop||"",assigneeId:m?m.id:"",priority:S.qa.prio||"normal",due:due,status:"todo",checklist:[],planWeek:pw},pw?"Đã thêm vào kế hoạch "+(pl==="this"?"tuần này":"tuần sau"):"Đã thêm việc");
+  var due=(S.admin&&S.qa.due)||todayVN();if(pw&&due<pw)due=pw;
+  /* nhân viên chỉ gõ tên việc: tự gắn shop chính, hạn hôm nay */
+  var shop=S.admin?S.qa.shop:m?(S.shops.filter(function(s){return s.ownerId===m.id&&s.status!=="stopped"})[0]||{}).id:"";
+  var ok=await put("tasks/"+id,{title:title,shopId:shop||"",assigneeId:m?m.id:"",priority:(S.admin&&S.qa.prio)||"normal",due:due,status:"todo",checklist:[],planWeek:pw},pw?"Đã thêm vào kế hoạch "+(pl==="this"?"tuần này":"tuần sau"):"Đã thêm việc");
   if(ok){S.qa.title="";render(true);var el2=$("#qa-title");if(el2)el2.focus()}
 }
 async function toggleDone(id,checked){
@@ -1236,7 +1241,7 @@ function vGuide(){
    +GUIDE.map(function(g,i){return '<details class="ntg"'+(i<2?" open":"")+'><summary>'+esc(g[0])+'</summary><ul class="gl">'+g[1].map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul></details>'}).join("");
 }
 var HELP={
-  tasks:["Việc của tôi","Mọi việc giao cho bạn hoặc bạn tự tạo đều nằm ở đây, chia theo Quá hạn, Hôm nay, Sắp tới. Tick ô vuông khi xong. Bấm vào tên việc để mở: thêm checklist các bước nhỏ, ghi Nhật ký thực hiện (đã làm gì, kết quả, đang vướng gì). Huy đọc được nhật ký nên không cần nhắn lại."],
+  tasks:["Việc của tôi","Mọi việc Huy giao hoặc bạn tự thêm đều nằm ở đây. Gõ việc vào ô phía trên rồi bấm Enter, tick ô vuông khi xong. Muốn ghi thêm thì bấm vào tên việc."],
   plan:["Kế hoạch tuần","Trước 12:00 Chủ nhật, tạo các việc cho tuần sau: bấm Thêm việc mới, gõ việc rồi chọn Kế hoạch tuần sau. Trong tuần, việc phát sinh thì chọn Việc phát sinh để không tính vào tỷ lệ. Mục tiêu là xong từ 80% việc đã lên kế hoạch."],
   online:["Check-in và Check-out","Bấm Check-in khi bắt đầu làm. Nghỉ giữa chừng thì bấm Dừng lại, quay lại bấm Làm tiếp. Xong trong ngày thì bấm Check-out. Trang tự cộng giờ các lần làm trong ngày, chỉ để phối hợp, không dùng để chấm điểm."],
   reports:["Báo cáo","Báo cáo tuần nộp trước 12:00 Chủ nhật, báo cáo tháng trong 2 ngày sau khi hết tháng làm việc. Bấm Viết báo cáo: trang tự điền các việc bạn đã xong và kế hoạch tuần sau, bạn bổ sung số liệu, vấn đề, ý tưởng rồi bấm Nộp báo cáo. Có thể Lưu nháp để viết tiếp. Huy trả lời ngay ở phần Trao đổi bên dưới báo cáo."],
