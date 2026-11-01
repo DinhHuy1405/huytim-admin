@@ -105,6 +105,7 @@
       sup.forEach(function (s) { (by[s.shop_id] = by[s.shop_id] || []).push(s.staff_id); });
       return shops.map(function (row) { var o = fromRow("shops", row); o.supportIds = by[row.id] || []; return { id: row.id, data: o }; });
     }
+    if (name === "clients" && level("timus") < 3) return must(await sb.rpc("timus_client_names")).map(function (row) { return { id: row.id, data: { name: row.name } }; });
     if (GEN.indexOf(name) >= 0) {
       return must(await T(name).select("*")).map(function (row) { return { id: row.id, data: fromRow(name, row) }; });
     }
