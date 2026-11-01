@@ -493,6 +493,8 @@ function buildAlerts(){
   });
   S.clients.filter(function(c){return c.status==="active"&&c.contractStart}).forEach(function(c){var r=nextRenewal(c.contractStart);var left=r?daysBetween(t,r):999;if(left<=30)A.push({tone:"info",t:"Hợp đồng đến kỳ gia hạn sau "+left+" ngày",d:c.name+" · kỳ mới từ "+fmtDate(r)+"; báo trước 30 ngày nếu muốn thay đổi",act:"edit-client",id:c.id})});
   if(S.admin){
+    var yd=addDays(t,-1);
+    activeStaff().filter(function(st){return st.uid&&(!st.startDate||st.startDate<=yd)}).forEach(function(st){var sh=SHIFTS[shiftOf(st.id,yd)];if(sh&&sh.s&&!S.dayLogs.some(function(l){return l.author===st.uid&&l.logDate===yd}))A.push({tone:"warn",t:"Hôm qua có ca nhưng chưa có nhật ký",d:st.name+" · ca "+fmtDM(yd),act:"go-logs",id:""})});
     var wait=S.reports.filter(function(r){return r.status==="submitted"}).length;
     if(wait)A.push({tone:"warn",t:wait+" báo cáo chờ bạn xem",d:"Đọc và trả lời ở phần trao đổi trong báo cáo",act:"go-reports",id:""});
     var W=weekStart(t),due=vnMs(addDays(W,-1),12);
@@ -601,7 +603,7 @@ function vShops(){
    +'<select id="fs-platform" aria-label="Sàn">'+opt("","Mọi sàn",f.platform)+Object.keys(PF).map(function(k){return opt(k,PF[k],f.platform)}).join("")+'</select>'
    +'<select id="fs-status" aria-label="Trạng thái">'+opt("","Mọi trạng thái",f.status)+Object.keys(SHOP_ST).map(function(k){return opt(k,SHOP_ST[k][0],f.status)}).join("")+'</select>'
    +'<select id="fs-staff" aria-label="Nhân viên">'+opt("","Mọi nhân viên",f.staff)+activeStaff().map(function(s){return opt(s.id,s.name,f.staff)}).join("")+'</select>'
-   +'</div>'+(S.readonly?"":'<button class="btn primary" data-act="add-shop">Thêm shop</button>')+'</div>';
+   +'</div>'+(S.admin?'<button class="btn primary" data-act="add-shop">Thêm shop</button>':"")+'</div>';
   if(!S.shops.length)return h+'<div class="empty">Chưa có shop. Bấm Thêm shop để nhập shop đầu tiên: sàn, thị trường, thương hiệu và người phụ trách.</div>';
   if(!list.length)return h+'<div class="empty">Không có shop khớp bộ lọc.</div>';
   h+='<div class="tbl"><table><thead><tr><th>Shop</th><th>Sàn</th><th>Thị trường</th><th>Trạng thái</th><th>Phụ trách chính</th><th>Hỗ trợ</th><th>Sức khỏe</th><th class="num">Việc mở</th><th>Mở bán</th><th></th></tr></thead><tbody>'
@@ -622,7 +624,7 @@ function vShops(){
 function vStaff(){
   var t=todayVN();
   var list=S.staff.slice().sort(function(a,b){return ((a.status==="left")-(b.status==="left"))||(a.name||"").localeCompare(b.name||"","vi")});
-  var h='<div class="toolbar"><p class="note" style="margin:0">'+activeStaff().length+' người đang làm. Bấm vào thẻ để xem shop và việc của từng người.</p>'+(S.readonly?"":'<button class="btn primary" data-act="add-staff">Thêm nhân viên</button>')+'</div>';
+  var h='<div class="toolbar"><p class="note" style="margin:0">'+activeStaff().length+' người đang làm. Bấm vào thẻ để xem shop và việc của từng người.</p>'+(S.admin?'<button class="btn primary" data-act="add-staff">Thêm nhân viên</button>':"")+'</div>';
   if(!list.length)return h+'<div class="empty">Chưa có nhân viên. Bấm Thêm nhân viên để bắt đầu.</div>';
   if(S.admin)h+=workTable(t);
   h+='<div class="grid-cards">'+list.map(function(st){
@@ -648,7 +650,7 @@ function vSchedule(){
   var w=S.week,t=todayVN(),c=cells(w),list=activeStaff();
   var days=[0,1,2,3,4,5,6].map(function(i){return addDays(w,i)});
   var h='<div class="toolbar"><div class="filters"><button class="btn" data-act="week" data-id="-1">Tuần trước</button><button class="btn" data-act="week" data-id="0">Tuần này</button><button class="btn" data-act="week" data-id="1">Tuần sau</button>'
-   +'<span class="note">Tuần '+fmtDate(w)+' đến '+fmtDate(addDays(w,6))+'</span></div>'+(S.readonly?"":'<button class="btn" data-act="copy-week">Chép lịch tuần trước</button>')+'</div>';
+   +'<span class="note">Tuần '+fmtDate(w)+' đến '+fmtDate(addDays(w,6))+'</span></div>'+(S.admin?'<button class="btn" data-act="copy-week">Chép lịch tuần trước</button>':"")+'</div>';
   if(!list.length)return h+'<div class="empty">Chưa có nhân viên để xếp ca.</div>';
   var on=onShiftNow().map(function(o){return o.st.id});
   h+='<div class="tbl sched"><table><thead><tr><th>Nhân viên</th>'+days.map(function(d,i){return '<th class="'+(d===t?"today":"")+'">'+DOW[i]+'<small>'+fmtDM(d)+'</small></th>'}).join("")+'</tr></thead><tbody>'
@@ -954,7 +956,8 @@ async function wkAct(k){
       var v=($("#wk-end")||{}).value||"",d=vnDate(Date.parse(w.open.startedAt));
       if(!/^\d\d:\d\d$/.test(v)){toast("Nhập giờ dừng thực tế");return}
       var ms=vnMs(d,+v.slice(0,2),+v.slice(3));
-      if(ms<=Date.parse(w.open.startedAt)||ms>Date.now()){toast("Giờ dừng phải sau giờ bắt đầu "+hm(Date.parse(w.open.startedAt)));return}
+      if(ms<=Date.parse(w.open.startedAt))ms+=864e5; /* giờ dừng sau nửa đêm thuộc ngày hôm sau */
+      if(ms>Date.now()){toast("Giờ dừng phải sau giờ bắt đầu "+hm(Date.parse(w.open.startedAt)));return}
       await wkSave(w.open.id,Object.assign({},w.open,{endedAt:new Date(ms).toISOString(),note:"checkout"}),"Đã lưu giờ dừng");
     }
   }finally{S.wkBusy=false}
@@ -1008,7 +1011,7 @@ function planStats(staff,email,week){
 }
 function workPanel(m,t){
   if(S.admin&&!m)return "";
-  var W=weekStart(t),due=vnMs(addDays(W,6),12);
+  var W=weekStart(t),due=vnMs(addDays(W,6),12),fresh=m&&m.startDate&&m.startDate>W;
   var thisPlan=planStats(m,S.myId,W),nextPlan=planStats(m,S.myId,addDays(W,7));
   var wm=workMonth(m,t),prevEnd=addDays(wm.start,-1),prev=workMonth(m,addDays(wm.start,-1));
   var mShow=(!wm.future&&wm.idx>0&&t<=addDays(prevEnd,2))?prev:wm;
@@ -1016,9 +1019,9 @@ function workPanel(m,t){
   var wr=repFor("week",W),mr=repFor("month",mShow.start);
   var h='<div class="cols2" style="margin-bottom:12px"><section><h2 class="sec">Kế hoạch tuần'+helpBtn("plan")+'<span>tuần '+fmtDM(W)+' đến '+fmtDM(addDays(W,6))+'</span></h2>'
    +'<div class="alerts"><div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần này: xong '+thisPlan.done+'/'+thisPlan.total+' việc đã lên kế hoạch<small>Mục tiêu từ 80%. Việc phát sinh không tính vào tỷ lệ.</small></div>'+(thisPlan.pct==null?'<span class="pill mute">Chưa lên kế hoạch</span>':'<span class="pill '+(thisPlan.pct>=80?"ok":"warn")+'">'+thisPlan.pct+'%</span>')+'</div>'
-   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần sau: đã lên '+nextPlan.total+' việc<small>Hạn lên kế hoạch: 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'. Bấm Thêm việc mới, chọn Kế hoạch tuần sau.</small></div>'+(nextPlan.total?'<span class="pill ok">Đã lên</span>':'<span class="pill '+(Date.now()>due?"bad":"mute")+'">'+leftText(due)+'</span>')+'</div></div>'
+   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần sau: đã lên '+nextPlan.total+' việc<small>Hạn lên kế hoạch: 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'. Bấm Thêm việc mới, chọn Kế hoạch tuần sau.</small></div>'+(nextPlan.total?'<span class="pill ok">Đã lên</span>':fresh?'<span class="pill mute">Tuần đầu, chưa tính hạn</span>':'<span class="pill '+(Date.now()>due?"bad":"mute")+'">'+leftText(due)+'</span>')+'</div></div>'
    +'</section><section><h2 class="sec">Hạn nộp báo cáo'+helpBtn("reports")+'<span><button class="btn sm" data-act="go-reports">Mở Báo cáo</button></span></h2><div class="alerts">'
-   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Báo cáo tuần '+fmtDM(W)+' đến '+fmtDM(addDays(W,6))+'<small>Hạn 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'</small></div>'+repPill(wr,due)+'</div>'
+   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Báo cáo tuần '+fmtDM(W)+' đến '+fmtDM(addDays(W,6))+'<small>Hạn 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'</small></div>'+(fresh&&!wr?'<span class="pill mute">Tuần đầu, chưa tính hạn</span>':repPill(wr,due))+'</div>'
    +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Báo cáo tháng '+fmtDM(mShow.start)+' đến '+fmtDM(mShow.end)+(mShow.future?' (bắt đầu '+fmtDate(mShow.start)+')':'')+'<small>Hạn trong 2 ngày sau khi hết tháng làm việc ('+fmtDM(addDays(mShow.end,2))+')</small></div>'+repPill(mr,mDue)+'</div>'
    +'</div></section></div>';
   return h;
@@ -1462,7 +1465,7 @@ function shopForm(s){
     v.supportIds=(v.supportIds||[]).filter(function(x){return x!==v.ownerId});
     return put("shops/"+id,Object.assign({},s,v,{updatedAt:Date.now(),createdAt:s.createdAt||Date.now()}));
   },
-  onDelete:s.id?async function(){var ok=await del("shops/"+s.id);if(ok)toast("Đã xóa shop");return ok}:null});
+  onDelete:s.id&&S.admin?async function(){var ok=await del("shops/"+s.id);if(ok)toast("Đã xóa shop");return ok}:null});
 }
 function shopExtra(s){
   var tk=S.tasks.filter(function(x){return x.shopId===s.id&&x.status!=="done"});
@@ -1497,7 +1500,7 @@ function staffForm(st,access){
     {k:"payNote",label:"Ghi chú lương, KPI cá nhân",type:"textarea",src:p}
   ]);
   var mine=st.id?S.shops.filter(function(s){return s.ownerId===st.id||(s.supportIds||[]).indexOf(st.id)>=0}):[];
-  openDrawer({title:st.id?"Nhân viên: "+st.name:"Thêm nhân viên",values:st,fields:fields,
+  openDrawer({title:st.id?"Nhân viên: "+st.name:"Thêm nhân viên",values:st,fields:fields,ro:!S.admin,
     live:st.id?function(){renderDocs(st.id)}:null,
     extra:(st.id?docsBlock(st.id):"")+(st.id?'<div class="fsec"><span>Shop đang phụ trách</span></div>'+(mine.length?'<div class="chips" style="margin-top:8px">'+mine.map(function(s){return '<span class="pill '+(s.ownerId===st.id?"info":"mute")+'">'+esc(s.name)+(s.ownerId===st.id?" · chính":" · hỗ trợ")+'</span>'}).join("")+'</div>':'<p class="note">Chưa phụ trách shop nào.</p>'):""),
     onSave:async function(v){
@@ -1715,6 +1718,7 @@ document.addEventListener("click",async function(e){
     case "rc-add":addRepComment();return;
     case "kpi":kpiForm(id);return;
     case "go-reports":go("reports");return;
+    case "go-logs":go("logs");return;
     case "rep-filter":S.f.rep=id;render(true);return;
     case "add-note":noteForm();return;
     case "edit-note":noteForm(byId(S.notes,id));return;
@@ -1735,7 +1739,7 @@ document.addEventListener("click",async function(e){
     case "task-bulk":taskBulk(id);return;
     case "week":setWeek(+id);return;
     case "copy-week":copyWeek();return;
-    case "slot":if(S.readonly)return;openPop(t);return;
+    case "slot":if(!S.admin)return;openPop(t);return;
     case "pick-shift":closePop();setShift(id,+t.dataset.day,t.dataset.code);return;
     case "csv":exportCsv(id);return;
   }
