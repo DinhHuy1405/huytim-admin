@@ -327,7 +327,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 
 <script src="config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="store.js?v=10"></script>
+<script src="store.js?v=11"></script>
 <script src="../shell.js?v=5"></script>
 <script>
 (function(){
@@ -335,7 +335,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 /* ---------- danh mục ---------- */
 /* nhân viên chỉ thấy các trang này; muốn bật lại Báo cáo thì thêm "reports" */
 var STAFF_VIEWS=["mine","logs","dashboard","guide"];
-var VIEWS=[["mine","Việc của tôi"],["logs","Nhật ký"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["dashboard","Dashboard"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["clients","Khách hàng"]];
+var VIEWS=[["mine","Việc của tôi"],["logs","Nhật ký"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["dashboard","Dashboard"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["company","Hồ sơ công ty"],["clients","Khách hàng"]];
 var PF={shopee:"Shopee",lazada:"Lazada",tiktok:"TikTok Shop",amazon:"Amazon",shopify:"Shopify",ebay:"eBay",other:"Sàn khác"};
 var MK={VN:"Việt Nam",US:"Mỹ"};
 var SHOP_ST={setup:["Đang thiết lập","info"],active:["Đang vận hành","ok"],paused:["Tạm dừng","warn"],stopped:["Đã dừng","mute"]};
@@ -394,7 +394,7 @@ function mkTag(m){return '<span class="mk '+(m==="US"?"US":"VN")+'">'+(m==="US"?
 function opt(v,l,cur){return '<option value="'+esc(v)+'"'+(String(cur==null?"":cur)===String(v)?" selected":"")+'>'+esc(l)+'</option>'}
 
 /* ---------- trạng thái ---------- */
-var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],dayLogs:[],logF:{staff:"",month:""},shopReports:[],dash:{report:"",basis:"p",from:"",to:"",chart:"bar"},reports:[],repComments:[],sessions:[],kpi:[],docs:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
+var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],dayLogs:[],logF:{staff:"",month:""},compDocs:[],shopReports:[],dash:{report:"",basis:"p",from:"",to:"",chart:"bar"},reports:[],repComments:[],sessions:[],kpi:[],docs:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
   myId:null,admin:false,readonly:false,week:weekStart(todayVN()),month:todayVN().slice(0,7),
   f:{shop:{q:"",market:"",platform:"",status:"",staff:""},task:{mine:false,staff:"",shop:"",q:"",showDone:false},rep:""}};
 var db=null,user=null,subs={},metricsUnsub=null,confirmKey=null,drawer=null;
@@ -510,7 +510,7 @@ function buildAlerts(){
 /* ---------- vẽ: thanh bên ---------- */
 function renderSide(){
   var cnt={mine:myTasks().filter(function(x){return x.status!=="done"}).length,shops:S.shops.filter(function(s){return s.status!=="stopped"}).length,staff:activeStaff().length,tasks:S.tasks.filter(function(t){return t.status!=="done"}).length,clients:S.clients.filter(function(c){return c.status!=="ended"}).length};
-  var ICON={logs:"book",mine:"check",reports:"file",guide:"book",overview:"grid",dashboard:"chart",shops:"store",staff:"users",schedule:"cal",tasks:"board",performance:"trend",clients:"brief"};
+  var ICON={company:"file",logs:"book",mine:"check",reports:"file",guide:"book",overview:"grid",dashboard:"chart",shops:"store",staff:"users",schedule:"cal",tasks:"board",performance:"trend",clients:"brief"};
     var groups=[{key:"timus",label:"TIMUS Vận hành",items:VIEWS.filter(function(v){return S.admin||STAFF_VIEWS.indexOf(v[0])>=0}).map(function(v){return {label:v[1],href:"#"+v[0],icon:ICON[v[0]],current:S.view===v[0],attrs:'data-view="'+v[0]+'"',badge:cnt[v[0]]||""}})}];
   [["VN","Shop Việt Nam"],["US","Shop Mỹ"]].forEach(function(g){
     var l=S.shops.filter(function(s){return s.status!=="stopped"&&(s.market==="US"?"US":"VN")===g[0]}).sort(function(a,b){return (a.name||"").localeCompare(b.name||"","vi")});
@@ -1227,6 +1227,58 @@ async function deleteDoc(id){
   if(await del("staff_docs/"+id))toast("Đã xóa "+d.title);
 }
 
+/* ---------- hồ sơ công ty: file chung trong kho riêng tư, chỉ admin thấy ---------- */
+var CD_KIND={legal:"Pháp lý và thành lập",contract:"Hợp đồng mẫu",brand:"Thương hiệu",finance:"Tài chính, bảng giá",other:"Khác"};
+function cdRow(d){
+  return '<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">'+esc(d.title)+'<small>'+[d.docDate?fmtDate(d.docDate):"",d.sizeBytes?Math.round(d.sizeBytes/1024)+" KB":"",d.createdAt?"thêm "+fmtTime(d.createdAt):""].filter(Boolean).join(" · ")+'</small>'+(d.note?'<small style="white-space:pre-line">'+esc(d.note)+'</small>':"")+'</div>'
+   +'<div class="acts">'+(d.path?'<button class="btn sm" data-act="cd-open" data-id="'+d.id+'">Mở</button>':"")+'<button class="btn sm" data-act="cd-edit" data-id="'+d.id+'">Sửa</button><button class="btn sm danger" data-act="cd-del" data-id="'+d.id+'">'+(S.armDel===d.id?"Xóa?":"Xóa")+'</button></div></div>';
+}
+function vCompany(){
+  var h='<div class="toolbar"><p class="note" style="margin:0">File lưu trong kho riêng tư, không nằm trên GitHub. Chỉ admin TIMUS mở được, link mở file hết hạn sau 2 phút.</p><button class="btn" data-act="cd-add">Thêm thông tin</button></div>'
+   +'<details class="inp" data-key="cd"><summary>Tải file lên</summary><div class="inner"><div class="upl"><select id="cd-kind" aria-label="Nhóm tài liệu">'+Object.keys(CD_KIND).map(function(k){return opt(k,CD_KIND[k],"legal")}).join("")+'</select><span></span><input type="file" id="cd-file" multiple accept=".pdf,.png,.jpg,.jpeg,.docx" aria-label="Chọn file"><button class="btn sm primary" type="button" data-act="cd-up">Tải lên</button></div><p class="note">PDF, ảnh hoặc Word, mỗi file tối đa 10 MB. Chọn được nhiều file một lần, tên tài liệu lấy theo tên file.</p></div></details>';
+  if(!S.compDocs.length)return h+'<div class="empty">Chưa có tài liệu. Bấm Tải file lên để thêm hồ sơ thành lập công ty, hoặc Thêm thông tin để ghi mã số thuế, địa chỉ, số tài khoản.</div>';
+  Object.keys(CD_KIND).forEach(function(k){
+    var l=S.compDocs.filter(function(d){return (CD_KIND[d.kind]?d.kind:"other")===k}).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0)});
+    if(l.length)h+='<h2 class="sec">'+CD_KIND[k]+'<span>'+l.length+'</span></h2><div class="alerts" style="margin-bottom:20px">'+l.map(cdRow).join("")+'</div>';
+  });
+  return h;
+}
+function companyForm(d){
+  d=d||{kind:"legal"};
+  openDrawer({title:d.id?"Sửa thông tin":"Thêm thông tin",values:d,fields:[
+    {k:"title",label:"Tên",wide:true,ph:"Ví dụ: Mã số thuế công ty"},
+    {k:"kind",label:"Nhóm",type:"select",options:function(){return Object.keys(CD_KIND).map(function(k){return [k,CD_KIND[k]]})}},
+    {k:"docDate",label:"Ngày trên giấy tờ",type:"date"},
+    {k:"note",label:"Nội dung",type:"textarea",rows:6,wide:true,ph:"Thông tin chung, ghi chú cho file. Không ghi mật khẩu."}],
+  onSave:async function(v){if(!(v.title||"").trim()){toast("Nhập tên");return false}return put("company_docs/"+(d.id||newId("company_docs")),Object.assign({},d,v),"Đã lưu")}});
+}
+async function uploadCompany(){
+  var inp=$("#cd-file"),fs=inp&&inp.files?[].slice.call(inp.files):[],kind=$("#cd-kind").value,done=0;
+  if(!fs.length){toast("Chọn file trước");return}
+  var big=fs.filter(function(f){return f.size>10485760});if(big.length){toast(big[0].name+" lớn hơn 10 MB, nén lại rồi thử lại");return}
+  var btn=$('[data-act="cd-up"]');if(btn){btn.disabled=true;btn.textContent="Đang tải lên..."}
+  for(var i=0;i<fs.length;i++){
+    var f=fs[i],path="company/"+Date.now()+"-"+fileSlug(f.name);
+    try{
+      await db.files.upload(path,f);
+      if(await put("company_docs/"+newId("company_docs"),{title:f.name.replace(/\.[^.]+$/,""),kind:kind,path:path,sizeBytes:f.size},false))done++;else{try{await db.files.remove(path)}catch(_){}}
+    }catch(e){toast("Chưa tải lên được "+f.name+": "+((e&&e.message)||"lỗi không rõ"));break}
+  }
+  if(btn){btn.disabled=false;btn.textContent="Tải lên"}
+  if(done){inp.value="";toast("Đã tải lên "+done+" file")}
+}
+async function openCompany(id){
+  var d=byId(S.compDocs,id);if(!d||!d.path)return;
+  var w=window.open("","_blank");
+  try{var url=await db.files.url(d.path);if(w)w.location.href=url;else location.href=url}
+  catch(e){if(w)w.close();toast("Chưa mở được file: "+((e&&e.message)||"không có quyền"))}
+}
+async function deleteCompany(id){
+  var d=byId(S.compDocs,id);if(!d)return;
+  if(d.path){try{await db.files.remove(d.path)}catch(e){toast("Chưa xóa được file: "+((e&&e.message)||""));return}}
+  if(await del("company_docs/"+id))toast("Đã xóa "+d.title);
+}
+
 /* ---------- cẩm nang và hướng dẫn ---------- */
 var GUIDE=[
   ["Mỗi ca tối (19:00 đến 23:30)",["Bấm Check-in ở đầu mục Việc của tôi. Nghỉ giữa chừng thì bấm Dừng lại, quay lại bấm Làm tiếp.","Trả lời tin nhắn mới của người mua trong vòng 3 giờ, theo mẫu Huy đưa. Tin nhận ngoài khung thì trả lời ngay đầu ca kế tiếp.","Kiểm tra đơn chờ xác nhận, chờ lấy hàng, đơn giao trễ.","Xem đơn hủy và đơn hoàn: ghi lý do vào nhật ký việc; khiếu nại, hoàn tiền, đền bù thì chuyển Huy trước khi trả lời.","Đọc đánh giá mới; đánh giá 1 đến 3 sao báo Huy kèm ảnh chụp.","Xem tồn kho các SKU bán chạy, báo trước khi sắp hết.","Shopee Ads: xem chi tiêu và ROAS trong ngày, chỉnh theo hướng dẫn và ngân sách đã duyệt.","Ghi lại đã làm gì vào Nhật ký thực hiện của từng việc, tick xong việc, rồi bấm Check-out và ghi hai ô: Đã làm, Đề xuất làm tiếp."]],
@@ -1363,7 +1415,7 @@ function vDashboard(){
 function dIssue(t,l){return l.length?'<div class="grp" style="font-size:13px;color:var(--soft);margin:8px 0 4px">'+t+'</div>'+l.map(function(x){return '<div class="dbar" style="grid-template-columns:minmax(0,1fr) auto"><span class="n" title="'+esc(x[0])+'">'+esc(x[0].trim())+'</span><span class="v">'+esc(x[1])+'</span></div>'}).join(""):""}
 
 /* ---------- render chính ---------- */
-var R={logs:vLogs,dashboard:vDashboard,mine:vMine,reports:vReports,guide:vGuide,overview:vOverview,shops:vShops,staff:vStaff,schedule:vSchedule,tasks:vTasks,performance:vPerformance,clients:vClients};
+var R={company:vCompany,logs:vLogs,dashboard:vDashboard,mine:vMine,reports:vReports,guide:vGuide,overview:vOverview,shops:vShops,staff:vStaff,schedule:vSchedule,tasks:vTasks,performance:vPerformance,clients:vClients};
 var rafPending=false,deferred=false;
 function isEditing(a){return a&&$("#app").contains(a)&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="search"&&a.dataset.dirty==="1"}
 function schedule(){if(rafPending)return;rafPending=true;requestAnimationFrame(function(){rafPending=false;render(false)})}
@@ -1710,6 +1762,13 @@ document.addEventListener("click",async function(e){
     case "dash-chart":S.dash.chart=id;render(true);return;
     case "dash-range":{var rr=dRep().r,dd=rr.data.daily.rows,D0=dd[0][0],D1=dd[dd.length-1][0],day=function(n){return dd[Math.max(0,dd.length-n)][0]},mid=dd[Math.floor(dd.length/2)][0];
       HT.range({anchor:$("#dash-range"),from:S.dash.from||D0,to:S.dash.to||D1,min:D0,max:D1,presets:[["Cả kỳ",D0,D1],["7 ngày cuối",day(7),D1],["14 ngày cuối",day(14),D1],["3 ngày cuối",day(3),D1],["Nửa đầu kỳ",D0,mid],["Nửa cuối kỳ",mid,D1]],onApply:function(f,t){S.dash.from=f;S.dash.to=t;render(true)}});return}
+    case "cd-open":openCompany(id);return;
+    case "cd-up":uploadCompany();return;
+    case "cd-add":companyForm();return;
+    case "cd-edit":companyForm(byId(S.compDocs,id));return;
+    case "cd-del":
+      if(S.armDel!==id){S.armDel=id;render(true);setTimeout(function(){if(S.armDel===id){S.armDel=null;render(true)}},4000);return}
+      S.armDel=null;deleteCompany(id);return;
     case "doc-open":openDoc(id);return;
     case "doc-up":uploadDoc(id);return;
     case "doc-del":
@@ -1821,7 +1880,7 @@ function mapCol(name,key){
   if(!R[h]||(!S.admin&&STAFF_VIEWS.indexOf(h)<0))S.view=S.admin?"overview":"mine";
   render(true);
   try{if(!S.admin&&!localStorage.getItem("timus-tour-1"))setTimeout(function(){openTour(0)},600)}catch(_){}
-  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");col("reports","reports");col("report_comments","repComments");col("work_sessions","sessions");col("kpi_reviews","kpi");col("staff_docs","docs");col("shop_reports","shopReports");col("daily_logs","dayLogs");
+  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");col("reports","reports");col("report_comments","repComments");col("work_sessions","sessions");col("kpi_reviews","kpi");col("staff_docs","docs");col("shop_reports","shopReports");col("daily_logs","dayLogs");if(S.admin)col("company_docs","compDocs");
   db.doc("settings/app").onSnapshot(function(s){S.settings=s.exists?Object.assign({},s.data()):{};schedule()},function(){});
   var tw=weekStart(todayVN());watchWeek(tw);watchWeek(addDays(tw,-7));watchWeek(S.week);
   watchMonth();

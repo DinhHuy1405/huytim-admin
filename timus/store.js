@@ -39,6 +39,7 @@
     work_sessions: { author: "author_email", startedAt: "started_at", endedAt: "ended_at", note: "note" },
     daily_logs: { author: "author_email", logDate: "log_date", shopId: "shop_id", done: "done", proposed: "proposed" },
     shop_reports: { shopId: "shop_id", periodStart: "period_start", periodEnd: "period_end", data: "data", sourceFiles: "source_files" },
+    company_docs: { title: "title", kind: "kind", path: "path", sizeBytes: "size_bytes", docDate: "doc_date", note: "note", uploadedBy: "uploaded_by" },
     staff_docs: { staffId: "staff_id", title: "title", kind: "kind", path: "path", sizeBytes: "size_bytes", signedOn: "signed_on", uploadedBy: "uploaded_by" },
     kpi_reviews: { critA: "crit_a", critB: "crit_b", critC: "crit_c", critD: "crit_d", bonus: "bonus", note: "note" },
     clients: { name: "name", contactName: "contact_name", phone: "phone", email: "email", status: "status", contractStart: "contract_start", notes: "notes" },
@@ -68,10 +69,10 @@
     return o;
   }
   /* đọc ghi qua view public.timus_* (security_invoker, RLS của bảng gốc vẫn áp dụng) */
-  var GEN = ["staff", "tasks", "clients", "task_notes", "notes", "reports", "report_comments", "work_sessions", "staff_docs", "shop_reports", "daily_logs"];
+  var GEN = ["staff", "tasks", "clients", "task_notes", "notes", "reports", "report_comments", "work_sessions", "staff_docs", "shop_reports", "daily_logs", "company_docs"];
   function T(name) { return sb.from("timus_" + name); }
   function C(name) { return sb.from("core_" + name); }
-  var PK = { daily_logs: "id", shop_reports: "id", staff_docs: "id", kpi_reviews: "staff_id,month_start", reports: "id", report_comments: "id", work_sessions: "id", shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
+  var PK = { company_docs: "id", daily_logs: "id", shop_reports: "id", staff_docs: "id", kpi_reviews: "staff_id,month_start", reports: "id", report_comments: "id", work_sessions: "id", shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
   function up(name, rows) { return T(name).upsert(rows, { onConflict: PK[name] }); }
 
   /* ---------- ảnh chụp dữ liệu giống claude db ---------- */
@@ -121,7 +122,7 @@
     }
     throw { code: "invalid_argument", message: "Không có bảng " + name };
   }
-  var TABLES_OF = { shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], daily_logs: ["daily_logs"], shop_reports: ["shop_reports"], staff_docs: ["staff_docs"], reports: ["reports"], report_comments: ["report_comments"], work_sessions: ["work_sessions"], kpi_reviews: ["kpi_reviews"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
+  var TABLES_OF = { company_docs: ["company_docs"], shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], daily_logs: ["daily_logs"], shop_reports: ["shop_reports"], staff_docs: ["staff_docs"], reports: ["reports"], report_comments: ["report_comments"], work_sessions: ["work_sessions"], kpi_reviews: ["kpi_reviews"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
 
   function addDays(s, k) { var a = s.split("-").map(Number); return new Date(Date.UTC(a[0], a[1] - 1, a[2] + k)).toISOString().slice(0, 10); }
   async function loadWeek(w) {
@@ -170,7 +171,7 @@
     throw { code: "invalid_argument", message: "Không ghi được vào " + col };
   }
   async function delDoc(col, id) {
-    var map = { shops: ["shops", "id"], staff: ["staff", "id"], tasks: ["tasks", "id"], clients: ["clients", "id"], task_notes: ["task_notes", "id"], notes: ["notes", "id"], staff_docs: ["staff_docs", "id"], reports: ["reports", "id"], report_comments: ["report_comments", "id"], work_sessions: ["work_sessions", "id"], "secure/hr/pay": ["staff_pay", "staff_id"], "secure/biz/terms": ["client_terms", "client_id"] };
+    var map = { company_docs: ["company_docs", "id"], shops: ["shops", "id"], staff: ["staff", "id"], tasks: ["tasks", "id"], clients: ["clients", "id"], task_notes: ["task_notes", "id"], notes: ["notes", "id"], staff_docs: ["staff_docs", "id"], reports: ["reports", "id"], report_comments: ["report_comments", "id"], work_sessions: ["work_sessions", "id"], "secure/hr/pay": ["staff_pay", "staff_id"], "secure/biz/terms": ["client_terms", "client_id"] };
     var m = map[col]; if (!m) throw { code: "invalid_argument", message: "Không xóa được" };
     var rows = must(await T(m[0]).delete().eq(m[1], id).select(m[1]));
     if (!rows.length && col !== "secure/hr/pay" && col !== "secure/biz/terms") {
