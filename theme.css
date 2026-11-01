@@ -66,8 +66,8 @@ tbody tr:hover,tbody tr.click:hover{background:var(--hover)}
 /* ô nhập */
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .f input:focus,.f select:focus,.f textarea:focus{box-shadow:0 0 0 3px rgba(30,78,237,.14)}
-.bar i.a,.lbar i.a{background:var(--accent)}.bar i.b,.lbar i.b{background:var(--sky)}
-.bar,.lbar{background:var(--hover2)}
+.lbar i.a{background:var(--accent)}.lbar i.b{background:var(--sky)}
+.lbar{background:var(--hover2)}
 
 /* trang chủ */
 .tg.ok{background:var(--info-bg);color:var(--navy)}
