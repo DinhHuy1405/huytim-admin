@@ -57,6 +57,14 @@ h2 span{font-weight:400;font-size:13px;color:var(--soft)}
 .add{display:grid;grid-template-columns:minmax(0,1fr) 120px 140px auto;gap:6px;margin-bottom:14px}
 .add input,.add select,.logadd textarea{border:1px solid var(--line2);border-radius:4px;padding:6px 9px;min-width:0;background:#fff;font-size:14.5px}
 @media (max-width:640px){.add{grid-template-columns:1fr 1fr}.add .t{grid-column:1/-1}}
+details.inp{margin:0 0 14px;border:1px solid var(--line);border-radius:6px}
+details.inp>summary{cursor:pointer;padding:7px 10px;font-size:14px;color:var(--soft);list-style:none;border-radius:6px}
+details.inp>summary::-webkit-details-marker{display:none}
+details.inp>summary::before{content:"";display:inline-block;width:0;height:0;border-left:6px solid var(--soft);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:9px;vertical-align:1px;transition:transform .12s}
+details.inp[open]>summary::before{transform:rotate(90deg)}
+details.inp>summary:hover{background:var(--hover);color:var(--ink)}
+details.inp>.inner{padding:2px 8px 8px}
+details.inp .qa,details.inp .add,details.inp .logadd{margin:0;border:0;padding:0}
 .grp{font-size:13px;color:var(--soft);font-weight:500;margin:12px 0 4px}
 .rq{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 6px;border-bottom:1px solid var(--line);cursor:pointer}
 .rq:hover{background:var(--hover)}
@@ -126,7 +134,7 @@ var STAGE=[["tiep_can","Tiếp cận"],["dam_phan","Đàm phán"],["thiet_lap","
 var RQ_ST=[["moi","Mới"],["dang_lam","Đang làm"],["cho_khach","Chờ khách"],["xong","Xong"]];
 var KIND={bao_gia:"Báo giá",hop_dong:"Hợp đồng",thiet_lap:"Thiết lập",van_hanh:"Vận hành",giay_to:"Giấy tờ",khac:"Khác"};
 var PRIO={cao:"Cao",thuong:"Thường",thap:"Thấp"};
-var S={tab:"all",clients:[],reqs:[],ups:[],shops:[],kind:null,edit:null,delArm:false};
+var S={open:{},tab:"all",clients:[],reqs:[],ups:[],shops:[],kind:null,edit:null,delArm:false};
 var sb=null;
 
 var $=function(s,r){return (r||document).querySelector(s)};
@@ -194,9 +202,9 @@ function vClient(c){
    +'<div class="track">'+STAGE.map(function(s,i){return '<button type="button" data-stage="'+s[0]+'" class="'+(i===idx?"cur":i<idx?"past":"")+(s[0]==="tam_dung"?" pause":"")+'">'+s[1]+'</button>'}).join("")+'</div>'
    +'<div class="next"><b>Bước tiếp theo:</b> '+esc(c.next_action||"Chưa ghi. Bấm Sửa thông tin để điền.")+'</div>'
    +'<div class="cols"><section><h2>Yêu cầu<span>'+(reqs.length-dn)+' đang mở</span></h2>'
-   +'<form class="add" id="rq-add"><input class="t" id="rq-title" placeholder="Thêm yêu cầu của khách" aria-label="Yêu cầu mới" autocomplete="off" required><select id="rq-kind" aria-label="Loại">'+Object.keys(KIND).map(function(k){return opt(k,KIND[k],"khac")}).join("")+'</select><input type="date" id="rq-due" aria-label="Hạn"><button class="btn primary" type="submit">Thêm</button></form>'
+   +'<details class="inp" data-key="rq"'+(S.open.rq?" open":"")+'><summary>Thêm yêu cầu</summary><div class="inner"><form class="add" id="rq-add"><input class="t" id="rq-title" placeholder="Thêm yêu cầu của khách" aria-label="Yêu cầu mới" autocomplete="off" required><select id="rq-kind" aria-label="Loại">'+Object.keys(KIND).map(function(k){return opt(k,KIND[k],"khac")}).join("")+'</select><input type="date" id="rq-due" aria-label="Hạn"><button class="btn primary" type="submit">Thêm</button></form></div></details>'
    +(groups||'<div class="empty">Chưa có yêu cầu nào.</div>')
-   +'</section><section><h2>Tiến độ</h2><div class="logadd"><textarea id="up-new" placeholder="Hôm nay đã làm gì, khách phản hồi gì..." aria-label="Ghi tiến độ"></textarea><button class="btn sm primary" type="button" id="up-add">Ghi</button></div>'
+   +'</section><section><h2>Tiến độ</h2><details class="inp" data-key="up"'+(S.open.up?" open":"")+'><summary>Ghi tiến độ</summary><div class="inner"><div class="logadd"><textarea id="up-new" placeholder="Hôm nay đã làm gì, khách phản hồi gì..." aria-label="Ghi tiến độ"></textarea><button class="btn sm primary" type="button" id="up-add">Ghi</button></div></div></details>'
    +(ups.length?ups.map(function(u){return '<div class="lg"><div class="h"><span>'+when(u.created_at)+'</span><button class="x" type="button" data-del-up="'+u.id+'" aria-label="Xóa ghi chép">×</button></div><p>'+esc(u.body)+'</p></div>'}).join(""):'<p class="t2">Chưa có ghi chép.</p>')
    +'<h2 style="margin-top:22px">Thông tin</h2><dl class="kv"><dt>Liên hệ</dt><dd>'+esc([c.contact_name,c.phone,c.email].filter(Boolean).join(" · ")||"Chưa có")+'</dd><dt>Hợp đồng</dt><dd>'+(c.contract_start?"từ "+dm(c.contract_start):"Chưa ký")+'</dd><dt>Shop</dt><dd>'+(shops.length?esc(shops.map(function(s){return s.name}).join(", ")):"Chưa có shop")+'</dd>'+(c.notes?'<dt>Ghi chú</dt><dd>'+esc(c.notes)+'</dd>':"")+'</dl></section></div>';
 }
@@ -253,6 +261,7 @@ function bind(){
     if(t.closest("select"))return;
     var rq=t.closest("[data-rq]");if(rq)reqForm(byId(S.reqs,rq.dataset.rq));
   });
+  document.addEventListener("toggle",function(e){var k=e.target.dataset&&e.target.dataset.key;if(k)S.open[k]=e.target.open},true);
   document.addEventListener("change",function(e){var id=e.target.dataset.st;if(id)save(sb.from("timus_client_requests").update({status:e.target.value}).eq("id",id).select("id"),"Đã cập nhật")});
   document.addEventListener("submit",async function(e){
     if(e.target.id==="d-form"){e.preventDefault();saveDrawer();return}

@@ -233,6 +233,14 @@ html,body{margin:0}
 .qa{display:grid;grid-template-columns:minmax(0,1fr) 170px 150px 100px 160px auto;gap:6px;margin:0 0 28px;padding:8px;border:1px solid var(--line);border-radius:6px}
 .qa input,.qa select{border:1px solid var(--line2);border-radius:4px;padding:6px 9px;min-width:0;background:#fff;font-size:14.5px}
 @media (max-width:760px){.qa{grid-template-columns:1fr 1fr}.qa #qa-title{grid-column:1/-1}}
+details.inp{margin:0 0 14px;border:1px solid var(--line);border-radius:6px}
+details.inp>summary{cursor:pointer;padding:7px 10px;font-size:14px;color:var(--soft);list-style:none;border-radius:6px}
+details.inp>summary::-webkit-details-marker{display:none}
+details.inp>summary::before{content:"";display:inline-block;width:0;height:0;border-left:6px solid var(--soft);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:9px;vertical-align:1px;transition:transform .12s}
+details.inp[open]>summary::before{transform:rotate(90deg)}
+details.inp>summary:hover{background:var(--hover);color:var(--ink)}
+details.inp>.inner{padding:2px 8px 8px}
+details.inp .qa,details.inp .add,details.inp .logadd{margin:0;border:0;padding:0}
 .tlist{display:flex;flex-direction:column;margin-bottom:24px}
 .tl{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line)}
 .tl:hover{background:var(--hover)}
@@ -298,7 +306,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 
 <script src="config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="store.js?v=6"></script>
+<script src="store.js?v=7"></script>
 <script>
 (function(){
 "use strict";
@@ -759,17 +767,17 @@ function vMine(){
   h+=workPanel(m,t);
   if(!S.readonly){
     var shopChoices=(myShops.length?myShops:S.shops.filter(function(s){return s.status!=="stopped"}));
-    h+='<form class="qa" id="qa"><input id="qa-title" placeholder="Thêm việc mới, ví dụ: Trả lời 12 tin nhắn tồn" aria-label="Việc mới" autocomplete="off" value="'+esc(S.qa.title)+'">'
+    h+='<details class="inp" data-key="qa"'+(S.qaOpen?" open":"")+'><summary>Thêm việc mới</summary><div class="inner"><form class="qa" id="qa"><input id="qa-title" placeholder="Thêm việc mới, ví dụ: Trả lời 12 tin nhắn tồn" aria-label="Việc mới" autocomplete="off" value="'+esc(S.qa.title)+'">'
       +'<select id="qa-shop" aria-label="Shop">'+opt("","Việc chung",S.qa.shop)+shopChoices.map(function(s){return opt(s.id,s.name,S.qa.shop)}).join("")+'</select>'
       +'<input type="date" id="qa-due" aria-label="Hạn" value="'+esc(S.qa.due||t)+'">'
       +'<select id="qa-prio" aria-label="Ưu tiên">'+Object.keys(PRIO).map(function(k){return opt(k,PRIO[k][0],S.qa.prio)}).join("")+'</select>'
       +'<select id="qa-plan" aria-label="Thuộc kế hoạch tuần">'+opt("this","Kế hoạch tuần này",S.qa.plan)+opt("next","Kế hoạch tuần sau",S.qa.plan)+opt("","Việc phát sinh",S.qa.plan)+'</select>'
-      +'<button class="btn primary" type="submit">Thêm việc</button></form>';
+      +'<button class="btn primary" type="submit">Thêm việc</button></form></div></details>';
   }
   h+='<div class="cols2"><section>';
   var any=false;
   groups.forEach(function(g){if(!g[1].length)return;h+='<h2 class="sec">'+g[0]+(any?"":helpBtn("tasks"))+'<span>'+g[1].length+' việc</span></h2>';any=true;h+='<div class="tlist">'+g[1].sort(byDue).map(function(x){return taskLine(x,t)}).join("")+'</div>'});
-  if(!any)h+='<h2 class="sec">Việc cần làm</h2><div class="empty">Chưa có việc nào đang mở. Gõ việc cần làm vào ô phía trên rồi bấm Thêm việc.</div>';
+  if(!any)h+='<h2 class="sec">Việc cần làm</h2><div class="empty">Chưa có việc nào đang mở. Bấm Thêm việc mới ở phía trên để bắt đầu.</div>';
   if(done.length)h+='<details class="dn"><summary>Đã xong 7 ngày qua ('+done.length+')</summary><div class="tlist">'+done.map(function(x){return taskLine(x,t)}).join("")+'</div></details>';
   var mine=S.notes.filter(function(n){return n.author===S.myId}).sort(function(a,b){return (b.pinned-a.pinned)||((b.updatedAt||0)-(a.updatedAt||0))});
   var team=S.notes.filter(function(n){return n.author!==S.myId&&n.shared}).sort(function(a,b){return (b.updatedAt||0)-(a.updatedAt||0)}).slice(0,10);
@@ -872,7 +880,7 @@ function workPanel(m,t){
    +(S.readonly?"":'<button class="btn '+(sess?"":"primary")+'" data-act="online">'+(sess?"Kết thúc":"Bắt đầu làm việc")+'</button>')+'</div>'
    +'<h2 class="sec" style="margin-top:22px">Kế hoạch tuần'+helpBtn("plan")+'<span>tuần '+fmtDM(W)+' đến '+fmtDM(addDays(W,6))+'</span></h2>'
    +'<div class="alerts"><div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần này: xong '+thisPlan.done+'/'+thisPlan.total+' việc đã lên kế hoạch<small>Mục tiêu từ 80%. Việc phát sinh không tính vào tỷ lệ.</small></div>'+(thisPlan.pct==null?'<span class="pill mute">Chưa lên kế hoạch</span>':'<span class="pill '+(thisPlan.pct>=80?"ok":"warn")+'">'+thisPlan.pct+'%</span>')+'</div>'
-   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần sau: đã lên '+nextPlan.total+' việc<small>Hạn lên kế hoạch: 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'. Thêm việc ở ô bên dưới, chọn Kế hoạch tuần sau.</small></div>'+(nextPlan.total?'<span class="pill ok">Đã lên</span>':'<span class="pill '+(Date.now()>due?"bad":"mute")+'">'+leftText(due)+'</span>')+'</div></div>'
+   +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Tuần sau: đã lên '+nextPlan.total+' việc<small>Hạn lên kế hoạch: 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'. Bấm Thêm việc mới, chọn Kế hoạch tuần sau.</small></div>'+(nextPlan.total?'<span class="pill ok">Đã lên</span>':'<span class="pill '+(Date.now()>due?"bad":"mute")+'">'+leftText(due)+'</span>')+'</div></div>'
    +'</section><section><h2 class="sec">Hạn nộp báo cáo'+helpBtn("reports")+'<span><button class="btn sm" data-act="go-reports">Mở Báo cáo</button></span></h2><div class="alerts">'
    +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Báo cáo tuần '+fmtDM(W)+' đến '+fmtDM(addDays(W,6))+'<small>Hạn 12:00 Chủ nhật '+fmtDM(addDays(W,6))+'</small></div>'+repPill(wr,due)+'</div>'
    +'<div class="alert" style="grid-template-columns:minmax(0,1fr) auto"><div class="msg">Báo cáo tháng '+fmtDM(mShow.start)+' đến '+fmtDM(mShow.end)+(mShow.future?' (bắt đầu '+fmtDate(mShow.start)+')':'')+'<small>Hạn trong 2 ngày sau khi hết tháng làm việc ('+fmtDM(addDays(mShow.end,2))+')</small></div>'+repPill(mr,mDue)+'</div>'
@@ -1084,7 +1092,7 @@ function vGuide(){
 }
 var HELP={
   tasks:["Việc của tôi","Mọi việc giao cho bạn hoặc bạn tự tạo đều nằm ở đây, chia theo Quá hạn, Hôm nay, Sắp tới. Tick ô vuông khi xong. Bấm vào tên việc để mở: thêm checklist các bước nhỏ, ghi Nhật ký thực hiện (đã làm gì, kết quả, đang vướng gì). Huy đọc được nhật ký nên không cần nhắn lại."],
-  plan:["Kế hoạch tuần","Trước 12:00 Chủ nhật, tạo các việc cho tuần sau: gõ việc ở ô Thêm việc, chọn Kế hoạch tuần sau. Trong tuần, việc phát sinh thì chọn Việc phát sinh để không tính vào tỷ lệ. Mục tiêu là xong từ 80% việc đã lên kế hoạch."],
+  plan:["Kế hoạch tuần","Trước 12:00 Chủ nhật, tạo các việc cho tuần sau: bấm Thêm việc mới, gõ việc rồi chọn Kế hoạch tuần sau. Trong tuần, việc phát sinh thì chọn Việc phát sinh để không tính vào tỷ lệ. Mục tiêu là xong từ 80% việc đã lên kế hoạch."],
   online:["Bắt đầu và kết thúc làm việc","Bấm Bắt đầu làm việc khi vào ca, bấm Kết thúc khi nghỉ. Trang chỉ ghi lại để Huy biết lúc nào bạn đang trực tuyến và dễ phối hợp. Hợp đồng đánh giá theo kết quả, không theo số giờ."],
   reports:["Báo cáo","Báo cáo tuần nộp trước 12:00 Chủ nhật, báo cáo tháng trong 2 ngày sau khi hết tháng làm việc. Bấm Viết báo cáo: trang tự điền các việc bạn đã xong và kế hoạch tuần sau, bạn bổ sung số liệu, vấn đề, ý tưởng rồi bấm Nộp báo cáo. Có thể Lưu nháp để viết tiếp. Huy trả lời ngay ở phần Trao đổi bên dưới báo cáo."],
   notes:["Ghi chú","Ghi lại mẫu trả lời khách, mẹo xử lý, thông tin cần nhớ của shop. Ghi chú chỉ bạn thấy, trừ khi bật Chia sẻ cho cả nhóm TIMUS. Không ghi mật khẩu hay thông tin cá nhân của người mua vào đây."],
@@ -1497,6 +1505,7 @@ document.addEventListener("keydown",function(e){
 });
 window.addEventListener("scroll",closePop,{passive:true});
 window.addEventListener("hashchange",function(){var h=(location.hash||"").replace("#","");if(R[h]&&h!==S.view){S.view=h;closePop();render(true);window.scrollTo(0,0)}});
+document.addEventListener("toggle",function(e){if(e.target.dataset&&e.target.dataset.key==="qa")S.qaOpen=e.target.open},true);
 document.addEventListener("submit",function(e){if(e.target.id==="qa"){e.preventDefault();quickAdd()}});
 document.addEventListener("input",function(e){
   var qa={"qa-title":"title","qa-due":"due"}[e.target.id];if(qa){S.qa[qa]=e.target.value;return}

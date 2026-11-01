@@ -38,6 +38,14 @@ h1{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:0
 .qa{display:grid;grid-template-columns:minmax(0,1fr) 170px 150px 110px 150px auto;gap:6px;margin:0 0 14px;padding:8px;border:1px solid var(--line);border-radius:6px}
 .qa input,.qa select,.filters input{border:1px solid var(--line2);border-radius:4px;padding:6px 9px;min-width:0;background:#fff;font-size:14.5px}
 @media (max-width:900px){.qa{grid-template-columns:1fr 1fr}.qa #qa-title{grid-column:1/-1}}
+details.inp{margin:0 0 14px;border:1px solid var(--line);border-radius:6px}
+details.inp>summary{cursor:pointer;padding:7px 10px;font-size:14px;color:var(--soft);list-style:none;border-radius:6px}
+details.inp>summary::-webkit-details-marker{display:none}
+details.inp>summary::before{content:"";display:inline-block;width:0;height:0;border-left:6px solid var(--soft);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:9px;vertical-align:1px;transition:transform .12s}
+details.inp[open]>summary::before{transform:rotate(90deg)}
+details.inp>summary:hover{background:var(--hover);color:var(--ink)}
+details.inp>.inner{padding:2px 8px 8px}
+details.inp .qa,details.inp .add,details.inp .logadd{margin:0;border:0;padding:0}
 .filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:16px}
 .filters input{width:220px;max-width:100%;margin-left:auto}
 .btn{border:1px solid var(--line2);background:#fff;border-radius:4px;padding:5px 11px;cursor:pointer;font-size:14px;white-space:nowrap}
@@ -95,14 +103,14 @@ label.f.w{grid-column:1/-1}
   </header>
   <main id="app" hidden>
     <div class="stats" id="stats"></div>
-    <form class="qa" id="qa">
+    <details class="inp"><summary>Thêm việc mới</summary><div class="inner"><form class="qa" id="qa">
       <input id="qa-title" placeholder="Thêm việc mới, ví dụ: Chấm bài tuần 2 của học viên" aria-label="Việc mới" autocomplete="off" required>
       <select id="qa-area" aria-label="Mảng"></select>
       <input id="qa-project" placeholder="Dự án" aria-label="Dự án" autocomplete="off">
       <select id="qa-prio" aria-label="Ưu tiên"></select>
       <input id="qa-due" type="date" aria-label="Hạn">
       <button class="btn primary" type="submit">Thêm việc</button>
-    </form>
+    </form></div></details>
     <div class="filters" id="filters"></div>
     <div class="board" id="board"></div>
   </main>
