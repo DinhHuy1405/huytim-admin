@@ -307,7 +307,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 @media (max-width:640px){.filters input[type=search]{width:100%}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lbar{grid-column:1/-1;grid-row:2}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=6">
+<link rel="stylesheet" href="../theme.css?v=7">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -326,13 +326,13 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 
 <script src="config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="store.js?v=8"></script>
+<script src="store.js?v=9"></script>
 <script src="../shell.js?v=3"></script>
 <script>
 (function(){
 "use strict";
 /* ---------- danh mục ---------- */
-var VIEWS=[["mine","Việc của tôi"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["dashboard","Dashboard"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["clients","Khách hàng"]];
+var VIEWS=[["mine","Việc của tôi"],["logs","Nhật ký"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["dashboard","Dashboard"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["clients","Khách hàng"]];
 var PF={shopee:"Shopee",lazada:"Lazada",tiktok:"TikTok Shop",amazon:"Amazon",shopify:"Shopify",ebay:"eBay",other:"Sàn khác"};
 var MK={VN:"Việt Nam",US:"Mỹ"};
 var SHOP_ST={setup:["Đang thiết lập","info"],active:["Đang vận hành","ok"],paused:["Tạm dừng","warn"],stopped:["Đã dừng","mute"]};
@@ -391,7 +391,7 @@ function mkTag(m){return '<span class="mk '+(m==="US"?"US":"VN")+'">'+(m==="US"?
 function opt(v,l,cur){return '<option value="'+esc(v)+'"'+(String(cur==null?"":cur)===String(v)?" selected":"")+'>'+esc(l)+'</option>'}
 
 /* ---------- trạng thái ---------- */
-var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],shopReports:[],dash:{report:"",basis:"p",from:"",to:"",chart:"bar"},reports:[],repComments:[],sessions:[],kpi:[],docs:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
+var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],dayLogs:[],logF:{staff:"",month:""},shopReports:[],dash:{report:"",basis:"p",from:"",to:"",chart:"bar"},reports:[],repComments:[],sessions:[],kpi:[],docs:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
   myId:null,admin:false,readonly:false,week:weekStart(todayVN()),month:todayVN().slice(0,7),
   f:{shop:{q:"",market:"",platform:"",status:"",staff:""},task:{mine:false,staff:"",shop:"",q:"",showDone:false},rep:""}};
 var db=null,user=null,subs={},metricsUnsub=null,confirmKey=null,drawer=null;
@@ -505,7 +505,7 @@ function buildAlerts(){
 /* ---------- vẽ: thanh bên ---------- */
 function renderSide(){
   var cnt={mine:myTasks().filter(function(x){return x.status!=="done"}).length,shops:S.shops.filter(function(s){return s.status!=="stopped"}).length,staff:activeStaff().length,tasks:S.tasks.filter(function(t){return t.status!=="done"}).length,clients:S.clients.filter(function(c){return c.status!=="ended"}).length};
-  var ICON={mine:"check",reports:"file",guide:"book",overview:"grid",dashboard:"chart",shops:"store",staff:"users",schedule:"cal",tasks:"board",performance:"trend",clients:"brief"};
+  var ICON={logs:"book",mine:"check",reports:"file",guide:"book",overview:"grid",dashboard:"chart",shops:"store",staff:"users",schedule:"cal",tasks:"board",performance:"trend",clients:"brief"};
     var groups=[{key:"timus",label:"TIMUS Vận hành",items:VIEWS.filter(function(v){return S.admin||v[0]!=="clients"}).map(function(v){return {label:v[1],href:"#"+v[0],icon:ICON[v[0]],current:S.view===v[0],attrs:'data-view="'+v[0]+'"',badge:cnt[v[0]]||""}})}];
   [["VN","Shop Việt Nam"],["US","Shop Mỹ"]].forEach(function(g){
     var l=S.shops.filter(function(s){return s.status!=="stopped"&&(s.market==="US"?"US":"VN")===g[0]}).sort(function(a,b){return (a.name||"").localeCompare(b.name||"","vi")});
@@ -921,13 +921,14 @@ function wkBox(m,t){
   var go=function(k,l,c){return '<button type="button" class="btn '+(c||"")+'" data-act="wk" data-id="'+k+'">'+l+'</button>'};
   if(!S.readonly){
     if(w.k==="idle")b=go("in","Check-in","primary big");
-    if(w.k==="on")b=go("pause","Dừng lại","big")+go("out","Check-out","primary big");
-    if(w.k==="paused")b=go("in","Làm tiếp","primary big")+go("out","Check-out","big");
-    if(w.k==="closed")b=go("in","Làm tiếp","big");
+    if(w.k==="on")b=go("pause","Dừng lại","big")+go("log","Check-out","primary big");
+    if(w.k==="paused")b=go("in","Làm tiếp","primary big")+go("log","Check-out","big");
+    if(w.k==="closed")b=(myLog(t)?'<button type="button" class="btn big" data-act="log-edit">Sửa nhật ký</button>':'<button type="button" class="btn primary big" data-act="log-edit">Ghi nhật ký</button>')+go("in","Làm tiếp","big");
     if(w.k==="stale")b='<label class="f">Giờ dừng thực tế<input type="time" id="wk-end" aria-label="Giờ dừng thực tế"></label>'+go("fix","Lưu giờ dừng","primary big");
   }
   var sub=w.k==="stale"?"Phiên bắt đầu "+hm(Date.parse(w.open.startedAt))+" ngày "+fmtDM(vnDate(Date.parse(w.open.startedAt)))+" chưa được dừng. Nhập giờ dừng thực tế trước khi làm tiếp.":w.l.length?w.l.map(sessText).join(", "):"Bấm Check-in khi bắt đầu làm. Nghỉ giữa chừng thì bấm Dừng lại, quay lại bấm Làm tiếp.";
-  return '<section class="wk'+(w.k==="on"?" on":"")+'"><div class="wk-l"><div class="wk-st"><i></i>'+lab+' · '+fmtDM(t)+'</div><div class="wk-t" id="wk-timer" aria-live="off">'+hms(workMs(S.myId,t))+'</div><div class="wk-s">'+esc(sub)+'</div></div><div class="wk-r">'+b+'</div></section>';
+  var pv=prevLog(S.myId,t),plan=pv&&pv.proposed?'<div class="wk-p"><b>Hôm trước bạn đề xuất làm</b>'+esc(pv.proposed)+'</div>':"";
+  return '<section class="wk'+(w.k==="on"?" on":"")+'"><div class="wk-l"><div class="wk-st"><i></i>'+lab+' · '+fmtDM(t)+'</div><div class="wk-t" id="wk-timer" aria-live="off">'+hms(workMs(S.myId,t))+'</div><div class="wk-s">'+esc(sub)+'</div>'+plan+'</div><div class="wk-r">'+b+'</div></section>';
 }
 function wkChip(t){
   if(S.readonly||!me()||!S.myId)return "";
@@ -958,6 +959,41 @@ async function wkAct(k){
     }
   }finally{S.wkBusy=false}
   render(true);
+}
+/* nhật ký ngày: một người một dòng mỗi ngày, ghi khi check-out */
+function myLog(d){return S.dayLogs.filter(function(x){return x.author===S.myId&&x.logDate===d})[0]||null}
+function prevLog(email,d){return S.dayLogs.filter(function(x){return x.author===email&&x.logDate<d}).sort(function(a,b){return a.logDate<b.logDate?1:-1})[0]||null}
+function logForm(out,x){
+  var t=x?x.logDate:todayVN(),m=me(),cur=x||myLog(t),own=!x||x.author===S.myId,pv=prevLog(x?x.author:S.myId,t);
+  var shops=m?S.shops.filter(function(s){return s.status!=="stopped"&&(s.ownerId===m.id||(s.supportIds||[]).indexOf(m.id)>=0)}):[];
+  var fields=[
+    {k:"done",label:"Đã làm hôm nay",type:"textarea",rows:7,wide:true,ph:"Ghi có số cụ thể. Ví dụ: Trả lời 12 chat, sửa ảnh 3 sản phẩm, đăng ký 1 Flash Sale"},
+    {k:"proposed",label:"Đề xuất làm tiếp",type:"textarea",rows:5,wide:true,ph:"Ví dụ: Đổi ảnh bìa sản phẩm Khay đựng đồ, xem lại lý do hủy đơn tuần này"}];
+  if(shops.length>1)fields.push({k:"shopId",label:"Shop chính hôm nay",type:"select",wide:true,options:function(){return shops.map(function(s){return [s.id,s.name]})}});
+  openDrawer({title:(own?"Nhật ký ":"Nhật ký của "+authorName(x.author)+" ")+fmtDM(t),values:Object.assign({shopId:shops[0]?shops[0].id:""},cur||{}),ro:!own,fields:fields,saveLabel:out?"Lưu và check-out":"Lưu",
+    intro:pv&&pv.proposed?"Hôm trước đề xuất:\n"+pv.proposed:"",buttons:out?[{act:"log-skip",label:"Check-out, ghi sau"}]:[],
+    onSave:async function(v){
+      if(!(v.done||"").trim()){toast("Ghi việc đã làm hôm nay");return false}
+      var id=cur?cur.id:newId("daily_logs"),d=Object.assign({},cur||{},v,{logDate:t,author:cur?cur.author:S.myId});
+      var ok=await put("daily_logs/"+id,d,out?false:"Đã lưu nhật ký");if(!ok)return false;
+      d.id=id;var i=S.dayLogs.map(function(r){return r.id}).indexOf(id);if(i>=0)S.dayLogs[i]=d;else S.dayLogs.push(d);
+      if(out)await wkAct("out");return true}});
+}
+function vLogs(){
+  var f=S.logF,t=todayVN(),month=f.month||t.slice(0,7),staff=activeStaff().filter(function(st){return st.uid});
+  var who=S.admin?(f.staff?[f.staff]:staff.map(function(st){return st.uid})):[S.myId],rows=[];
+  var last=month===t.slice(0,7)?t:month+"-"+("0"+new Date(+month.slice(0,4),+month.slice(5,7),0).getDate()).slice(-2);
+  who.forEach(function(u){for(var d=last;d.slice(0,7)===month;d=addDays(d,-1)){
+    var l=S.dayLogs.filter(function(x){return x.author===u&&x.logDate===d})[0],ms=workMs(u,d);
+    if(l||ms)rows.push({u:u,d:d,l:l,ms:ms});
+  }});
+  rows.sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:0});
+  var missing=rows.filter(function(r){return !r.l&&r.d<t}).length;
+  var h='<div class="toolbar"><div class="filters">'+(S.admin?'<select id="lf-staff" aria-label="Nhân viên">'+opt("","Mọi nhân viên",f.staff)+staff.map(function(st){return opt(st.uid,st.name,f.staff)}).join("")+'</select>':"")+'<input type="month" id="lf-month" aria-label="Tháng" value="'+esc(month)+'"></div>'+(S.admin?"":'<button class="btn primary" data-act="log-edit">Ghi nhật ký hôm nay</button>')+'</div>';
+  if(!rows.length)return h+'<div class="empty">Chưa có nhật ký trong tháng này. Nhật ký được ghi khi bấm Check-out cuối ngày.</div>';
+  h+='<div class="stats">'+stat(rows.filter(function(r){return r.l}).length,"ngày đã ghi")+stat(missing,"ngày có làm nhưng chưa ghi",missing?"bad":"")+stat(hms(rows.reduce(function(a,r){return a+r.ms},0)),"tổng giờ ghi nhận")+'</div>';
+  return h+'<div class="tbl"><table class="lg-t"><thead><tr><th>Ngày</th>'+(S.admin?'<th>Nhân viên</th>':"")+'<th>Đã làm</th><th>Đề xuất làm tiếp</th><th class="num">Giờ làm</th></tr></thead><tbody>'
+   +rows.map(function(r){var l=r.l;return '<tr'+(l?' class="click" tabindex="0" data-act="log-open" data-id="'+l.id+'"':"")+'><td class="t1">'+fmtDM(r.d)+'</td>'+(S.admin?'<td class="t2">'+esc(authorName(r.u))+'</td>':"")+(l?'<td class="pre">'+esc(l.done)+'</td><td class="pre">'+esc(l.proposed)+'</td>':'<td colspan="2"><span class="pill '+(r.d<t?"bad":"")+'">'+(r.d<t?"Chưa ghi":"Chưa check-out")+'</span></td>')+'<td class="num t2">'+hms(r.ms)+'</td></tr>'}).join("")+'</tbody></table></div>';
 }
 function workTable(t){
   var l=activeStaff().filter(function(st){return st.uid});if(!l.length)return "";
@@ -1018,6 +1054,8 @@ function vReports(){
   h+='<section class="block"><h2 class="sec">Đánh giá tháng'+helpBtn("kpi")+'<span>theo tiêu chí khoản bổ sung trong hợp đồng</span></h2>'+kpiTable()+'</section>';
   return h;
 }
+function logsIn(a,b,k){return S.dayLogs.filter(function(x){return x.author===S.myId&&x.logDate>=a&&x.logDate<=b&&x[k]}).sort(function(p,q){return p.logDate<q.logDate?-1:1}).map(function(x){return fmtDM(x.logDate)+": "+x[k]}).join("\n")}
+function lastProposal(end){var l=prevLog(S.myId,addDays(end,1));return l?l.proposed:""}
 function reportForm(r,kind){
   var m=me(),t=todayVN();
   if(!r){
@@ -1031,7 +1069,7 @@ function reportForm(r,kind){
     var planT=myTasks().filter(function(x){return x.planWeek===nextW});
     var mainShop=m?S.shops.filter(function(s){return s.ownerId===m.id&&s.status!=="stopped"})[0]:null;
     r={kind:kind,periodStart:start,periodEnd:end,shopId:mainShop?mainShop.id:"",status:"draft",numbers:{},
-      summary:doneT.map(function(x){return "- "+x.title}).join("\n"),nextPlan:kind==="week"?planT.map(function(x){return "- "+x.title}).join("\n"):"",issues:"",ideas:"",ideasCount:0};
+      summary:logsIn(start,end,"done")||doneT.map(function(x){return "- "+x.title}).join("\n"),nextPlan:kind==="week"?(lastProposal(end)||planT.map(function(x){return "- "+x.title}).join("\n")):"",issues:"",ideas:"",ideasCount:0};
   }
   var own=r.author?r.author===S.myId:true;
   var ro=!S.admin&&(!own||r.status==="reviewed");
@@ -1177,7 +1215,7 @@ async function deleteDoc(id){
 
 /* ---------- cẩm nang và hướng dẫn ---------- */
 var GUIDE=[
-  ["Mỗi ca tối (19:00 đến 23:30)",["Bấm Check-in ở đầu mục Việc của tôi. Nghỉ giữa chừng thì bấm Dừng lại, quay lại bấm Làm tiếp.","Trả lời tin nhắn mới của người mua trong vòng 3 giờ, theo mẫu Huy đưa. Tin nhận ngoài khung thì trả lời ngay đầu ca kế tiếp.","Kiểm tra đơn chờ xác nhận, chờ lấy hàng, đơn giao trễ.","Xem đơn hủy và đơn hoàn: ghi lý do vào nhật ký việc; khiếu nại, hoàn tiền, đền bù thì chuyển Huy trước khi trả lời.","Đọc đánh giá mới; đánh giá 1 đến 3 sao báo Huy kèm ảnh chụp.","Xem tồn kho các SKU bán chạy, báo trước khi sắp hết.","Shopee Ads: xem chi tiêu và ROAS trong ngày, chỉnh theo hướng dẫn và ngân sách đã duyệt.","Ghi lại đã làm gì vào Nhật ký thực hiện của từng việc, tick xong việc, rồi bấm Check-out."]],
+  ["Mỗi ca tối (19:00 đến 23:30)",["Bấm Check-in ở đầu mục Việc của tôi. Nghỉ giữa chừng thì bấm Dừng lại, quay lại bấm Làm tiếp.","Trả lời tin nhắn mới của người mua trong vòng 3 giờ, theo mẫu Huy đưa. Tin nhận ngoài khung thì trả lời ngay đầu ca kế tiếp.","Kiểm tra đơn chờ xác nhận, chờ lấy hàng, đơn giao trễ.","Xem đơn hủy và đơn hoàn: ghi lý do vào nhật ký việc; khiếu nại, hoàn tiền, đền bù thì chuyển Huy trước khi trả lời.","Đọc đánh giá mới; đánh giá 1 đến 3 sao báo Huy kèm ảnh chụp.","Xem tồn kho các SKU bán chạy, báo trước khi sắp hết.","Shopee Ads: xem chi tiêu và ROAS trong ngày, chỉnh theo hướng dẫn và ngân sách đã duyệt.","Ghi lại đã làm gì vào Nhật ký thực hiện của từng việc, tick xong việc, rồi bấm Check-out và ghi hai ô: Đã làm, Đề xuất làm tiếp."]],
   ["Mỗi tuần",["Đầu tuần: xem số liệu tuần trước (doanh số, đơn, lượt truy cập, tỷ lệ chuyển đổi theo SKU).","Đăng ký campaign, Flash Sale, voucher, combo. Đổi giá hoặc khuyến mãi lớn phải được Huy đồng ý trước.","Tối ưu tiêu đề, từ khóa, ảnh, mô tả cho vài SKU có lượt xem cao nhưng ít đơn.","Trước 12:00 Chủ nhật: nộp Báo cáo tuần trên trang và lên Kế hoạch tuần sau (thêm việc, chọn Kế hoạch tuần sau)."]],
   ["Mỗi tháng",["Nộp Báo cáo tháng trong 2 ngày sau khi hết tháng làm việc.","Đề xuất ít nhất 2 ý tưởng cải thiện kèm số liệu.","Review ngắn với Huy về kết quả và tiêu chí tháng sau."]],
   ["Phải hỏi Huy trước khi làm",["Thay đổi lớn về giá bán, chương trình khuyến mãi, ngân sách quảng cáo.","Khiếu nại, hoàn trả, đền bù, hoặc câu hỏi bạn chưa chắc câu trả lời.","Việc ngoài phạm vi (chụp ảnh, kịch bản video, sàn khác...): thỏa thuận mức thưởng trước khi làm."]],
@@ -1201,7 +1239,7 @@ var HELP={
 function helpBtn(k){return '<button class="hlp" type="button" data-act="help" data-id="'+k+'" aria-label="Hướng dẫn">?</button>'}
 var TOUR=[
   ["Chào mừng bạn đến TIMUS","Đây là trang làm việc của bạn: xem việc, tự lên kế hoạch, ghi nhật ký, nộp báo cáo và trao đổi với Huy. Mất khoảng 1 phút để xem hướng dẫn này.","mine"],
-  ["1. Bắt đầu ca","Mỗi lần vào làm, bấm nút Check-in lớn ở đầu trang. Nghỉ giữa chừng bấm Dừng lại, quay lại bấm Làm tiếp, xong ngày bấm Check-out. Trang chỉ ghi lại để phối hợp, không dùng để chấm điểm.","mine"],
+  ["1. Bắt đầu ca","Mỗi lần vào làm, bấm nút Check-in lớn ở đầu trang. Nghỉ giữa chừng bấm Dừng lại, quay lại bấm Làm tiếp, xong ngày bấm Check-out rồi ghi hai ô nhật ký. Trang chỉ ghi lại để phối hợp, không dùng để chấm điểm.","mine"],
   ["2. Thêm việc và lên kế hoạch",HELP.plan[1],"mine"],
   ["3. Làm việc và ghi nhật ký",HELP.tasks[1],"mine"],
   ["4. Nộp báo cáo",HELP.reports[1],"reports"],
@@ -1313,7 +1351,7 @@ function vDashboard(){
 function dIssue(t,l){return l.length?'<div class="grp" style="font-size:13px;color:var(--soft);margin:8px 0 4px">'+t+'</div>'+l.map(function(x){return '<div class="dbar" style="grid-template-columns:minmax(0,1fr) auto"><span class="n" title="'+esc(x[0])+'">'+esc(x[0].trim())+'</span><span class="v">'+esc(x[1])+'</span></div>'}).join(""):""}
 
 /* ---------- render chính ---------- */
-var R={dashboard:vDashboard,mine:vMine,reports:vReports,guide:vGuide,overview:vOverview,shops:vShops,staff:vStaff,schedule:vSchedule,tasks:vTasks,performance:vPerformance,clients:vClients};
+var R={logs:vLogs,dashboard:vDashboard,mine:vMine,reports:vReports,guide:vGuide,overview:vOverview,shops:vShops,staff:vStaff,schedule:vSchedule,tasks:vTasks,performance:vPerformance,clients:vClients};
 var rafPending=false,deferred=false;
 function isEditing(a){return a&&$("#app").contains(a)&&/INPUT|TEXTAREA/.test(a.tagName)&&a.type!=="search"&&a.dataset.dirty==="1"}
 function schedule(){if(rafPending)return;rafPending=true;requestAnimationFrame(function(){rafPending=false;render(false)})}
@@ -1374,7 +1412,7 @@ function openDrawer(cfg){
   drawer=cfg;confirmKey=null;
   var v=cfg.values||{};
   $("#drawerRoot").innerHTML='<div class="scrim" data-act="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-title"><header><h3 id="dr-title">'+esc(cfg.title)+'</h3><button class="btn sm" data-act="close">Đóng</button></header>'
-   +'<div class="body"><div class="fgrid">'+cfg.fields.map(function(f){return fieldHTML(f,f.src?(f.src[f.k]):v[f.k])}).join("")+'</div>'+(cfg.extra?'<div class="extra">'+cfg.extra+'</div>':"")+'</div>'
+   +'<div class="body"><div class="fgrid">'+(cfg.intro?'<div class="dr-intro">'+esc(cfg.intro)+'</div>':"")+cfg.fields.map(function(f){return fieldHTML(f,f.src?(f.src[f.k]):v[f.k])}).join("")+'</div>'+(cfg.extra?'<div class="extra">'+cfg.extra+'</div>':"")+'</div>'
    +'<footer><div class="acts">'+(cfg.onDelete&&!S.readonly&&!cfg.ro?'<button class="btn danger" data-act="dr-del" id="dr-del">Xóa</button>':"")+'</div><div class="acts"><button class="btn" data-act="close">Hủy</button>'+(cfg.buttons||[]).map(function(b){return '<button class="btn '+(b.cls||"")+'" data-act="'+b.act+'">'+esc(b.label)+'</button>'}).join("")+(S.readonly||cfg.ro||cfg.noSave?"":'<button class="btn primary" data-act="dr-save">'+esc(cfg.saveLabel||"Lưu")+'</button>')+'</div></footer></aside>';
   if(cfg.live)cfg.live();
   var first=$(".drawer input,.drawer select,.drawer textarea");if(first)first.focus();
@@ -1651,7 +1689,10 @@ document.addEventListener("click",async function(e){
     case "settings":settingsForm();return;
     case "signout":if(window.TIMUS_AUTH)TIMUS_AUTH.signOut();return;
     case "help":openHelp(id);return;
-    case "wk":wkAct(id);return;
+    case "wk":if(id==="log")logForm(true);else wkAct(id);return;
+    case "log-edit":logForm(false);return;
+    case "log-skip":closeDrawer();wkAct("out");return;
+    case "log-open":{var lg=byId(S.dayLogs,id);if(lg)logForm(false,lg);return}
     case "go-mine":go("mine");return;
     case "dash-basis":S.dash.basis=id;render(true);return;
     case "dash-chart":S.dash.chart=id;render(true);return;
@@ -1722,6 +1763,7 @@ document.addEventListener("change",async function(e){
   var t=e.target;
   var m={"fs-market":["shop","market"],"fs-platform":["shop","platform"],"fs-status":["shop","status"],"fs-staff":["shop","staff"],"ft-staff":["task","staff"],"ft-shop":["task","shop"]}[t.id];
   if(m){S.f[m[0]][m[1]]=t.value;render(true);return}
+  if(t.id==="lf-staff"||t.id==="lf-month"){if(t.id==="lf-staff")S.logF.staff=t.value;else S.logF.month=t.value;render(true);return}
   if(t.id==="dash-report"){S.dash.report=t.value;S.dash.from=S.dash.to="";render(true);return}
   var qa={"qa-shop":"shop","qa-prio":"prio","qa-due":"due","qa-plan":"plan"}[t.id];if(qa){S.qa[qa]=t.value;return}
   if(t.id==="perfMonth"&&t.value){S.month=t.value;watchMonth();render(true);return}
@@ -1763,7 +1805,7 @@ function mapCol(name,key){
   if(!R[h])S.view=S.admin?"overview":"mine";
   render(true);
   try{if(!S.admin&&!localStorage.getItem("timus-tour-1"))setTimeout(function(){openTour(0)},600)}catch(_){}
-  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");col("reports","reports");col("report_comments","repComments");col("work_sessions","sessions");col("kpi_reviews","kpi");col("staff_docs","docs");col("shop_reports","shopReports");
+  col("shops","shops");col("staff","staff");col("tasks","tasks");col("clients","clients");col("task_notes","taskNotes");col("notes","notes");col("reports","reports");col("report_comments","repComments");col("work_sessions","sessions");col("kpi_reviews","kpi");col("staff_docs","docs");col("shop_reports","shopReports");col("daily_logs","dayLogs");
   db.doc("settings/app").onSnapshot(function(s){S.settings=s.exists?Object.assign({},s.data()):{};schedule()},function(){});
   var tw=weekStart(todayVN());watchWeek(tw);watchWeek(addDays(tw,-7));watchWeek(S.week);
   watchMonth();

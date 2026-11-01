@@ -270,6 +270,11 @@ label.chk input[type=checkbox]:checked::after,.sw:checked::after{transform:trans
 .wk.on .wk-st i,.wk-chip.on i{background:var(--ok-num)}
 .wk-t{margin:4px 0 2px;font-size:38px;font-weight:500;line-height:1.15;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .wk-s{font-size:12.5px;color:var(--soft);overflow-wrap:anywhere}
+.wk-p{margin-top:10px;padding:8px 10px;background:var(--band);border-radius:6px;font-size:13px;white-space:pre-line;overflow-wrap:anywhere}
+.wk-p b{display:block;font-weight:500;font-size:12px;color:var(--soft)}
+.lg-t td{vertical-align:top}
+.lg-t td.pre{white-space:pre-line;overflow-wrap:anywhere;min-width:220px;font-size:13px}
+.dr-intro{grid-column:1/-1;padding:8px 10px;background:var(--band);border-radius:6px;font-size:13px;white-space:pre-line;overflow-wrap:anywhere}
 .wk-r{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
 .btn.big{min-height:46px;padding:8px 26px;font-size:15px}
 .wk-r .f{min-width:150px}

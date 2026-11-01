@@ -37,6 +37,7 @@
       submittedAt: "submitted_at", reviewedAt: "reviewed_at" },
     report_comments: { reportId: "report_id", author: "author_email", body: "body" },
     work_sessions: { author: "author_email", startedAt: "started_at", endedAt: "ended_at", note: "note" },
+    daily_logs: { author: "author_email", logDate: "log_date", shopId: "shop_id", done: "done", proposed: "proposed" },
     shop_reports: { shopId: "shop_id", periodStart: "period_start", periodEnd: "period_end", data: "data", sourceFiles: "source_files" },
     staff_docs: { staffId: "staff_id", title: "title", kind: "kind", path: "path", sizeBytes: "size_bytes", signedOn: "signed_on", uploadedBy: "uploaded_by" },
     kpi_reviews: { critA: "crit_a", critB: "crit_b", critC: "crit_c", critD: "crit_d", bonus: "bonus", note: "note" },
@@ -47,7 +48,7 @@
     settings: { fx: "fx_rate", overload: "overload_limit" }
   };
   /* cột chữ bắt buộc có giá trị: ô trống gửi chuỗi rỗng thay vì null */
-  var NOT_NULL_TEXT = { reports: ["summary", "issues", "ideas", "next_plan"], notes: ["body"] };
+  var NOT_NULL_TEXT = { daily_logs: ["done", "proposed"], reports: ["summary", "issues", "ideas", "next_plan"], notes: ["body"] };
   function toRow(table, obj) {
     var m = MAPS[table], r = {}, keep = NOT_NULL_TEXT[table] || [];
     Object.keys(m).forEach(function (k) {
@@ -67,10 +68,10 @@
     return o;
   }
   /* đọc ghi qua view public.timus_* (security_invoker, RLS của bảng gốc vẫn áp dụng) */
-  var GEN = ["staff", "tasks", "clients", "task_notes", "notes", "reports", "report_comments", "work_sessions", "staff_docs", "shop_reports"];
+  var GEN = ["staff", "tasks", "clients", "task_notes", "notes", "reports", "report_comments", "work_sessions", "staff_docs", "shop_reports", "daily_logs"];
   function T(name) { return sb.from("timus_" + name); }
   function C(name) { return sb.from("core_" + name); }
-  var PK = { shop_reports: "id", staff_docs: "id", kpi_reviews: "staff_id,month_start", reports: "id", report_comments: "id", work_sessions: "id", shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
+  var PK = { daily_logs: "id", shop_reports: "id", staff_docs: "id", kpi_reviews: "staff_id,month_start", reports: "id", report_comments: "id", work_sessions: "id", shops: "id", staff: "id", tasks: "id", clients: "id", task_notes: "id", notes: "id", staff_pay: "staff_id", client_terms: "client_id", shop_metrics: "shop_id,month", shift_assignments: "staff_id,work_date" };
   function up(name, rows) { return T(name).upsert(rows, { onConflict: PK[name] }); }
 
   /* ---------- ảnh chụp dữ liệu giống claude db ---------- */
@@ -120,7 +121,7 @@
     }
     throw { code: "invalid_argument", message: "Không có bảng " + name };
   }
-  var TABLES_OF = { shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], shop_reports: ["shop_reports"], staff_docs: ["staff_docs"], reports: ["reports"], report_comments: ["report_comments"], work_sessions: ["work_sessions"], kpi_reviews: ["kpi_reviews"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
+  var TABLES_OF = { shops: ["shops", "shop_support"], staff: ["staff"], tasks: ["tasks"], clients: ["clients"], task_notes: ["task_notes"], notes: ["notes"], daily_logs: ["daily_logs"], shop_reports: ["shop_reports"], staff_docs: ["staff_docs"], reports: ["reports"], report_comments: ["report_comments"], work_sessions: ["work_sessions"], kpi_reviews: ["kpi_reviews"], "secure/hr/pay": ["staff_pay"], "secure/biz/terms": ["client_terms"], metrics: ["shop_metrics"] };
 
   function addDays(s, k) { var a = s.split("-").map(Number); return new Date(Date.UTC(a[0], a[1] - 1, a[2] + k)).toISOString().slice(0, 10); }
   async function loadWeek(w) {
