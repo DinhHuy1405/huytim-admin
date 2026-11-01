@@ -88,6 +88,16 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}
 .lg .h{display:flex;gap:8px;font-size:12.5px;color:var(--soft);align-items:baseline}
 .lg .x{margin-left:auto;border:0;background:none;color:var(--faint);cursor:pointer;font-size:15px;line-height:1}
 .lg p{margin:2px 0 0;white-space:pre-line;font-size:14.5px;overflow-wrap:anywhere}
+.docs{margin-top:26px}
+.doc{border:1px solid var(--line);border-radius:6px;margin-bottom:8px}
+.doc summary{cursor:pointer;padding:9px 12px;font-weight:500;font-size:14.5px}
+.doc .in{padding:0 12px 12px}
+.doc .bar{display:flex;justify-content:flex-end;margin-bottom:8px}
+.doc table{min-width:640px;font-size:14px}
+.doc td{vertical-align:top}
+.doc td.g{font-weight:600;background:var(--side)}
+.doc td.p{font-weight:500;white-space:normal}
+.doc .nt{font-size:13px;color:var(--soft);margin:8px 0 0}
 .kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:3px 10px;font-size:14px;margin:0 0 22px}
 .kv dt{color:var(--soft)}.kv dd{margin:0;overflow-wrap:anywhere}
 .btn{border:1px solid var(--line2);background:#fff;border-radius:4px;padding:5px 11px;cursor:pointer;font-size:14px;white-space:nowrap}
@@ -152,9 +162,9 @@ function byId(l,id){return l.filter(function(x){return x.id===id})[0]||null}
 
 /* ---------- dữ liệu ---------- */
 async function load(){
-  var r=await Promise.all([sb.from("timus_clients").select("*").order("created_at"),sb.from("timus_client_requests").select("*").order("created_at"),sb.from("timus_client_updates").select("*").order("created_at",{ascending:false}),sb.from("timus_shops").select("id,name,platform,market,status,client_id")]);
+  var r=await Promise.all([sb.from("timus_clients").select("*").order("created_at"),sb.from("timus_client_requests").select("*").order("created_at"),sb.from("timus_client_updates").select("*").order("created_at",{ascending:false}),sb.from("timus_shops").select("id,name,platform,market,status,client_id"),sb.from("timus_client_docs").select("*").order("created_at")]);
   if(r.some(function(x){return x.error})){toast("Chưa tải được dữ liệu. Tải lại trang thử lại.");return}
-  S.clients=r[0].data||[];S.reqs=r[1].data||[];S.ups=r[2].data||[];S.shops=r[3].data||[];
+  S.clients=r[0].data||[];S.reqs=r[1].data||[];S.ups=r[2].data||[];S.shops=r[3].data||[];S.docs=r[4].data||[];
   if(S.tab!=="all"&&!byId(S.clients,S.tab))S.tab="all";
   render();
 }
@@ -207,8 +217,14 @@ function vClient(c){
    +(groups||'<div class="empty">Chưa có yêu cầu nào.</div>')
    +'</section><section><h2>Tiến độ</h2><details class="inp" data-key="up"'+(S.open.up?" open":"")+'><summary>Ghi tiến độ</summary><div class="inner"><div class="logadd"><textarea id="up-new" placeholder="Hôm nay đã làm gì, khách phản hồi gì..." aria-label="Ghi tiến độ"></textarea><button class="btn sm primary" type="button" id="up-add">Ghi</button></div></div></details>'
    +(ups.length?ups.map(function(u){return '<div class="lg"><div class="h"><span>'+when(u.created_at)+'</span><button class="x" type="button" data-del-up="'+u.id+'" aria-label="Xóa ghi chép">×</button></div><p>'+esc(u.body)+'</p></div>'}).join(""):'<p class="t2">Chưa có ghi chép.</p>')
-   +'<h2 style="margin-top:22px">Thông tin</h2><dl class="kv"><dt>Liên hệ</dt><dd>'+esc([c.contact_name,c.phone,c.email].filter(Boolean).join(" · ")||"Chưa có")+'</dd><dt>Hợp đồng</dt><dd>'+(c.contract_start?"từ "+dm(c.contract_start):"Chưa ký")+'</dd><dt>Shop</dt><dd>'+(shops.length?esc(shops.map(function(s){return s.name}).join(", ")):"Chưa có shop")+'</dd>'+(c.notes?'<dt>Ghi chú</dt><dd>'+esc(c.notes)+'</dd>':"")+'</dl></section></div>';
+   +'<h2 style="margin-top:22px">Thông tin</h2><dl class="kv"><dt>Liên hệ</dt><dd>'+esc([c.contact_name,c.phone,c.email].filter(Boolean).join(" · ")||"Chưa có")+'</dd><dt>Hợp đồng</dt><dd>'+(c.contract_start?"từ "+dm(c.contract_start):"Chưa ký")+'</dd><dt>Shop</dt><dd>'+(shops.length?esc(shops.map(function(s){return s.name}).join(", ")):"Chưa có shop")+'</dd>'+(c.notes?'<dt>Ghi chú</dt><dd>'+esc(c.notes)+'</dd>':"")+'</dl></section></div>'+docsHtml(c);
 }
+
+function docTable(d){return '<table><thead><tr><th>Khoản</th><th>Nội dung</th><th>Giá</th></tr></thead><tbody>'+(d.rows||[]).map(function(r){return r.length===1?'<tr><td class="g" colspan="3">'+esc(r[0])+'</td></tr>':'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1])+'</td><td class="p">'+esc(r[2])+'</td></tr>'}).join("")+'</tbody></table>'}
+function docsHtml(c){var l=(S.docs||[]).filter(function(d){return d.client_id===c.id});if(!l.length)return "";
+  return '<div class="docs"><h2>Tài liệu<span>'+l.length+'</span></h2>'+l.map(function(d){var k="doc"+d.id;return '<details class="doc" data-key="'+k+'"'+(S.open[k]?" open":"")+'><summary>'+esc(d.title)+'</summary><div class="in"><div class="bar"><button class="btn sm" type="button" data-print-doc="'+d.id+'">In, lưu PDF</button></div><div class="tbl">'+docTable(d)+'</div>'+(d.note?'<p class="nt">'+esc(d.note)+'</p>':"")+'</div></details>'}).join("")+'</div>'}
+function printDoc(id){var d=byId(S.docs||[],id);if(!d)return;var w=window.open("","_blank");if(!w){toast("Trình duyệt đang chặn cửa sổ in.");return}
+  w.document.write('<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>'+esc(d.title)+'</title><style>@page{size:A4;margin:1.3cm 1.5cm}body{font-family:"Times New Roman",serif;font-size:10pt;color:#000;margin:16px}h1{font-size:14pt;text-align:center;margin:0 0 7pt}table{border-collapse:collapse;width:100%}th,td{border:.7pt solid #000;padding:2pt 4pt;text-align:left;vertical-align:top;font-size:9.5pt}th,td.g,td.p{font-weight:bold}th:first-child{width:22%}th:last-child{width:24%}tr{page-break-inside:avoid}p{font-size:9pt}</style></head><body><h1>'+esc(d.title).toUpperCase()+'</h1>'+docTable(d)+(d.note?'<p>'+esc(d.note)+'</p>':"")+'</body></html>');w.document.close();w.focus();w.print()}
 
 function selIds(){return S.reqs.filter(function(r){return S.sel[r.id]&&r.client_id===S.tab}).map(function(r){return r.id})}
 function renderBulk(){
@@ -271,6 +287,7 @@ function bind(){
     var ec=t.closest("[data-edit-client]");if(ec){clientForm(byId(S.clients,ec.dataset.editClient));return}
     var sg=t.closest("[data-stage]");if(sg){var st=sg.dataset.stage;await save(sb.from("timus_clients").update({stage:st,status:clientStatus(st)}).eq("id",S.tab).select("id"),"Đã chuyển sang "+stageName(st));return}
     if(t.id==="up-add"){var u=$("#up-new"),b=u.value.trim();if(!b)return;u.value="";if(!await save(sb.from("timus_client_updates").insert({client_id:S.tab,body:b}).select("id"),"Đã ghi"))$("#up-new").value=b;return}
+    var pd=t.closest("[data-print-doc]");if(pd){printDoc(pd.dataset.printDoc);return}
     var du=t.closest("[data-del-up]");if(du){await save(sb.from("timus_client_updates").delete().eq("id",du.dataset.delUp).select("id"),"Đã xóa ghi chép");return}
     var bk=t.closest("[data-rqbulk]");if(bk){rqBulk(bk.dataset.rqbulk);return}
     if(t.closest("select")||t.dataset.rqsel)return;
