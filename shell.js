@@ -77,6 +77,7 @@
     biz.push({ label: "Academy", href: "https://mentor.huytim.com", dot: "#9CA3B0", ext: true });
     biz.push({ label: "Landing", disabled: true, badge: "Sắp gắn" });
     var all = [{ key: "chung", label: "Menu", items: chung }].concat(o.groups || []).concat([{ key: "biz", label: "Business", items: biz }]);
+    if (o.admin === false) all = o.groups || []; /* nhân viên chỉ thấy trang của mình */
     el.innerHTML = '<a class="ws" href="' + esc(base || "./") + '"><i>H</i><span>Huy Tim</span></a><div class="nsb-scroll">' + all.map(group).join("") + "</div>"
       + (o.foot ? '<div class="nsb-foot">' + o.foot.map(function (f) { return '<button type="button" ' + f.attrs + ">" + ic(f.icon) + esc(f.label) + "</button>"; }).join("") + "</div>" : "");
     var tb = topbar();
