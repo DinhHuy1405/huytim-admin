@@ -81,7 +81,7 @@
     var tb = topbar();
     if (tb) {
       var u = o.user || {}, name = u.name || u.email || "";
-      document.getElementById("tb-r").innerHTML = (u.actions || []).map(function (a) { return '<button type="button" class="tb-ib" title="' + esc(a.label) + '" aria-label="' + esc(a.label) + '" ' + a.attrs + ">" + ic(a.icon) + "</button>"; }).join("")
+      document.getElementById("tb-r").innerHTML = (o.top || "") + (u.actions || []).map(function (a) { return '<button type="button" class="tb-ib" title="' + esc(a.label) + '" aria-label="' + esc(a.label) + '" ' + a.attrs + ">" + ic(a.icon) + "</button>"; }).join("")
         + (name ? '<div class="tb-u" title="' + esc(u.email || name) + '"><div class="av" aria-hidden="true">' + esc(name.trim().split(/\s+/).pop().charAt(0).toUpperCase()) + "</div><b>" + esc(name) + "</b></div>" : "");
     }
     if (!document.querySelector(".nsb-scrim")) { var s = document.createElement("div"); s.className = "nsb-scrim"; document.body.appendChild(s); }

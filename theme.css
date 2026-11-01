@@ -261,6 +261,24 @@ label.chk input[type=checkbox]:checked::after,.sw:checked::after{transform:trans
 .rq{grid-template-columns:auto minmax(0,1fr) auto}
 .rq input[type=checkbox]{margin:0}
 
+/* check-in */
+.wk{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 24px;margin:0 0 12px;padding:18px 20px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.wk.on{border-color:#BBCBEF}
+.wk-l{min-width:0;flex:1 1 320px}
+.wk-st{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--soft)}
+.wk-st i,.wk-chip i{width:7px;height:7px;flex:none;border-radius:50%;background:var(--faint)}
+.wk.on .wk-st i,.wk-chip.on i{background:var(--ok-num)}
+.wk-t{margin:4px 0 2px;font-size:38px;font-weight:500;line-height:1.15;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.wk-s{font-size:12.5px;color:var(--soft);overflow-wrap:anywhere}
+.wk-r{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.btn.big{min-height:46px;padding:8px 26px;font-size:15px}
+.wk-r .f{min-width:150px}
+.wk-chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px;border:1px solid var(--accent);border-radius:6px;background:var(--accent);color:#fff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.wk-chip:hover{background:var(--accent-hover)}
+.wk-chip.on{background:#fff;border-color:var(--line2);color:var(--ink);font-variant-numeric:tabular-nums}
+.wk-chip.on:hover{background:var(--hover2)}
+@media (max-width:560px){.wk-r,.wk-r .btn,.wk-r .f{width:100%}.wk-r .btn{flex:1 1 40%;width:auto}.wk-t{font-size:34px}}
+
 /* trang chủ */
 .biz-row{cursor:pointer}
 .biz-row a{color:inherit;text-decoration:none;font-weight:500;white-space:nowrap}
