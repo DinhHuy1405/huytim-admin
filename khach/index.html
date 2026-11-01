@@ -112,7 +112,7 @@ label.f.w{grid-column:1/-1}
 .login-card h1{font-size:26px}.login-card p{margin:0;color:var(--muted);font-size:14px}.login-card .btn{height:38px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=4">
+<link rel="stylesheet" href="../theme.css?v=5">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -122,6 +122,7 @@ label.f.w{grid-column:1/-1}
   <main id="app"></main>
 </div>
 <div id="drawerRoot"></div>
+<div class="bulk" id="bulk" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="../timus/config.js?v=1"></script>
@@ -134,7 +135,7 @@ var STAGE=[["tiep_can","Tiếp cận"],["dam_phan","Đàm phán"],["thiet_lap","
 var RQ_ST=[["moi","Mới"],["dang_lam","Đang làm"],["cho_khach","Chờ khách"],["xong","Xong"]];
 var KIND={bao_gia:"Báo giá",hop_dong:"Hợp đồng",thiet_lap:"Thiết lập",van_hanh:"Vận hành",giay_to:"Giấy tờ",khac:"Khác"};
 var PRIO={cao:"Cao",thuong:"Thường",thap:"Thấp"};
-var S={open:{},tab:"all",clients:[],reqs:[],ups:[],shops:[],kind:null,edit:null,delArm:false};
+var S={sel:{},bulkArm:false,open:{},tab:"all",clients:[],reqs:[],ups:[],shops:[],kind:null,edit:null,delArm:false};
 var sb=null;
 
 var $=function(s,r){return (r||document).querySelector(s)};
@@ -169,7 +170,7 @@ function render(){
   $("#tabs").hidden=false;$("#pcount").textContent=S.clients.length;
   $("#tabs").innerHTML='<button role="tab" data-tab="all" aria-selected="'+(S.tab==="all")+'">Tất cả</button>'+S.clients.map(function(c){var n=openOf(c.id).length;return '<button role="tab" data-tab="'+c.id+'" aria-selected="'+(S.tab===c.id)+'">'+esc(c.name)+(n?'<small>'+n+'</small>':"")+'</button>'}).join("")+'<button data-new="client">+ Khách hàng</button>';
   $("#app").innerHTML=S.tab==="all"?vAll():vClient(byId(S.clients,S.tab));
-  S.drawnTab=S.tab;
+  S.drawnTab=S.tab;renderBulk();
   if(prev===S.tab){if(draft&&$("#up-new"))$("#up-new").value=draft;if(rqDraft&&$("#rq-title"))$("#rq-title").value=rqDraft;if(fid&&document.getElementById(fid)){var el=document.getElementById(fid);if(val!=null&&val!==false&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA"))el.value=val;el.focus()}}
 }
 function vAll(){
@@ -196,7 +197,7 @@ function vClient(c){
     var l=reqs.filter(function(r){return r.status===s[0]}).sort(function(a,b){return (a.priority==="cao"?0:1)-(b.priority==="cao"?0:1)||((a.due_date||"9")<(b.due_date||"9")?-1:1)});
     if(!l.length)return "";
     return '<div class="grp">'+s[1]+' ('+l.length+')</div>'+l.map(function(r){var late=r.due_date&&r.due_date<t&&r.status!=="xong";
-      return '<div class="rq'+(r.status==="xong"?" done":"")+'" tabindex="0" data-rq="'+r.id+'"><div><div class="t1">'+esc(r.title)+'</div><div class="t2">'+[KIND[r.kind],r.priority==="cao"?'<span class="pill bad">Cao</span>':"",r.due_date?'<span class="'+(late?"late":"")+'">Hạn '+dm(r.due_date)+'</span>':"",esc(r.next_step||"")].filter(Boolean).join(" · ")+'</div></div><select data-st="'+r.id+'" aria-label="Đổi trạng thái">'+RQ_ST.map(function(x){return opt(x[0],x[1],r.status)}).join("")+'</select></div>'}).join("");
+      return '<div class="rq'+(r.status==="xong"?" done":"")+'" tabindex="0" data-rq="'+r.id+'"><input type="checkbox" data-rqsel="'+r.id+'" aria-label="Chọn: '+esc(r.title)+'"'+(S.sel[r.id]?" checked":"")+'><div><div class="t1">'+esc(r.title)+'</div><div class="t2">'+[KIND[r.kind],r.priority==="cao"?'<span class="pill bad">Cao</span>':"",r.due_date?'<span class="'+(late?"late":"")+'">Hạn '+dm(r.due_date)+'</span>':"",esc(r.next_step||"")].filter(Boolean).join(" · ")+'</div></div><select data-st="'+r.id+'" aria-label="Đổi trạng thái">'+RQ_ST.map(function(x){return opt(x[0],x[1],r.status)}).join("")+'</select></div>'}).join("");
   }).join("");
   return '<div class="hd2"><div><h3>'+esc(c.name)+'</h3><div class="sub">'+esc(c.services||"Chưa ghi dịch vụ")+' · xong '+dn+'/'+reqs.length+' yêu cầu</div></div><button class="btn sm" data-edit-client="'+c.id+'">Sửa thông tin</button></div>'
    +'<div class="track">'+STAGE.map(function(s,i){return '<button type="button" data-stage="'+s[0]+'" class="'+(i===idx?"cur":i<idx?"past":"")+(s[0]==="tam_dung"?" pause":"")+'">'+s[1]+'</button>'}).join("")+'</div>'
@@ -207,6 +208,19 @@ function vClient(c){
    +'</section><section><h2>Tiến độ</h2><details class="inp" data-key="up"'+(S.open.up?" open":"")+'><summary>Ghi tiến độ</summary><div class="inner"><div class="logadd"><textarea id="up-new" placeholder="Hôm nay đã làm gì, khách phản hồi gì..." aria-label="Ghi tiến độ"></textarea><button class="btn sm primary" type="button" id="up-add">Ghi</button></div></div></details>'
    +(ups.length?ups.map(function(u){return '<div class="lg"><div class="h"><span>'+when(u.created_at)+'</span><button class="x" type="button" data-del-up="'+u.id+'" aria-label="Xóa ghi chép">×</button></div><p>'+esc(u.body)+'</p></div>'}).join(""):'<p class="t2">Chưa có ghi chép.</p>')
    +'<h2 style="margin-top:22px">Thông tin</h2><dl class="kv"><dt>Liên hệ</dt><dd>'+esc([c.contact_name,c.phone,c.email].filter(Boolean).join(" · ")||"Chưa có")+'</dd><dt>Hợp đồng</dt><dd>'+(c.contract_start?"từ "+dm(c.contract_start):"Chưa ký")+'</dd><dt>Shop</dt><dd>'+(shops.length?esc(shops.map(function(s){return s.name}).join(", ")):"Chưa có shop")+'</dd>'+(c.notes?'<dt>Ghi chú</dt><dd>'+esc(c.notes)+'</dd>':"")+'</dl></section></div>';
+}
+
+function selIds(){return S.reqs.filter(function(r){return S.sel[r.id]&&r.client_id===S.tab}).map(function(r){return r.id})}
+function renderBulk(){
+  var n=selIds().length,b=$("#bulk");b.hidden=!n;if(!n){S.bulkArm=false;b.innerHTML="";return}
+  b.innerHTML='<span>Đã chọn: '+n+'</span>'+RQ_ST.map(function(s){return '<button type="button" data-rqbulk="'+s[0]+'">'+s[1]+'</button>'}).join("")+'<i></i><button type="button" data-rqbulk="del">'+HT.ic("trash")+(S.bulkArm?"Bấm lần nữa để xóa":"Xóa")+'</button><button type="button" class="end" data-rqbulk="clear">Bỏ chọn</button>';
+}
+async function rqBulk(k){
+  if(k==="clear"){S.sel={};render();return}
+  var ids=selIds();if(!ids.length)return;
+  if(k==="del"&&!S.bulkArm){S.bulkArm=true;renderBulk();return}
+  var q=sb.from("timus_client_requests"),ok=await save((k==="del"?q.delete():q.update({status:k})).in("id",ids).select("id"),k==="del"?"Đã xóa "+ids.length+" yêu cầu":"Đã chuyển "+ids.length+" yêu cầu");
+  if(ok){S.sel={};render()}
 }
 
 /* ---------- ngăn sửa ---------- */
@@ -258,11 +272,12 @@ function bind(){
     var sg=t.closest("[data-stage]");if(sg){var st=sg.dataset.stage;await save(sb.from("timus_clients").update({stage:st,status:clientStatus(st)}).eq("id",S.tab).select("id"),"Đã chuyển sang "+stageName(st));return}
     if(t.id==="up-add"){var u=$("#up-new"),b=u.value.trim();if(!b)return;u.value="";if(!await save(sb.from("timus_client_updates").insert({client_id:S.tab,body:b}).select("id"),"Đã ghi"))$("#up-new").value=b;return}
     var du=t.closest("[data-del-up]");if(du){await save(sb.from("timus_client_updates").delete().eq("id",du.dataset.delUp).select("id"),"Đã xóa ghi chép");return}
-    if(t.closest("select"))return;
+    var bk=t.closest("[data-rqbulk]");if(bk){rqBulk(bk.dataset.rqbulk);return}
+    if(t.closest("select")||t.dataset.rqsel)return;
     var rq=t.closest("[data-rq]");if(rq)reqForm(byId(S.reqs,rq.dataset.rq));
   });
   document.addEventListener("toggle",function(e){var k=e.target.dataset&&e.target.dataset.key;if(k)S.open[k]=e.target.open},true);
-  document.addEventListener("change",function(e){var id=e.target.dataset.st;if(id)save(sb.from("timus_client_requests").update({status:e.target.value}).eq("id",id).select("id"),"Đã cập nhật")});
+  document.addEventListener("change",function(e){if(e.target.dataset.rqsel){S.sel[e.target.dataset.rqsel]=e.target.checked;S.bulkArm=false;renderBulk();return}var id=e.target.dataset.st;if(id)save(sb.from("timus_client_requests").update({status:e.target.value}).eq("id",id).select("id"),"Đã cập nhật")});
   document.addEventListener("submit",async function(e){
     if(e.target.id==="d-form"){e.preventDefault();saveDrawer();return}
     if(e.target.id==="rq-add"){
