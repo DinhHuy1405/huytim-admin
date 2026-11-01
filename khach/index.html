@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>TIMUS Customers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>
 /* TIMUS Customers: kiểu Notion cơ bản. Mỗi khách hàng một tab; trong tab có giai đoạn, yêu cầu, nhật ký tiến độ. Chỉ có giao diện sáng. */
 :root{color-scheme:light;--bg:#FFFFFF;--side:#F7F7F5;--ink:#37352F;--muted:#5F5E5B;--soft:#787774;--faint:#9B9A97;--line:#E9E9E7;--line2:#DFDFDD;--hover:#F7F6F3;--hover2:#EFEFED;
@@ -112,14 +112,12 @@ label.f.w{grid-column:1/-1}
 .login-card h1{font-size:26px}.login-card p{margin:0;color:var(--muted);font-size:14px}.login-card .btn{height:38px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=2">
+<link rel="stylesheet" href="../theme.css?v=4">
 </head>
 <body>
+<aside id="side" class="nsb" aria-label="Điều hướng"></aside>
 <div class="wrap">
-  <header>
-    <div class="top"><div class="ws"><i>H</i>Huy Tim</div><div class="r"><a href="../">Tất cả business</a><a href="../timus/">TIMUS Vận hành</a><span id="who"></span><button class="btn sm" id="signout" hidden>Đăng xuất</button></div></div>
-    <h1>TIMUS Customers</h1>
-  </header>
+  <header class="bar"><h1>TIMUS Customers <span class="cnt" id="pcount"></span></h1></header>
   <nav class="tabs" id="tabs" role="tablist" aria-label="Khách hàng" hidden></nav>
   <main id="app"></main>
 </div>
@@ -128,6 +126,7 @@ label.f.w{grid-column:1/-1}
 
 <script src="../timus/config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+<script src="../shell.js?v=2"></script>
 <script>
 (function(){
 "use strict";
@@ -167,7 +166,7 @@ function render(){
   var a=document.activeElement,fid=a&&a.id;
   var val=fid&&a.value,draft=$("#up-new")?$("#up-new").value:"",rqDraft=$("#rq-title")?$("#rq-title").value:"";
   var prev=S.drawnTab;
-  $("#tabs").hidden=false;
+  $("#tabs").hidden=false;$("#pcount").textContent=S.clients.length;
   $("#tabs").innerHTML='<button role="tab" data-tab="all" aria-selected="'+(S.tab==="all")+'">Tất cả</button>'+S.clients.map(function(c){var n=openOf(c.id).length;return '<button role="tab" data-tab="'+c.id+'" aria-selected="'+(S.tab===c.id)+'">'+esc(c.name)+(n?'<small>'+n+'</small>':"")+'</button>'}).join("")+'<button data-new="client">+ Khách hàng</button>';
   $("#app").innerHTML=S.tab==="all"?vAll():vClient(byId(S.clients,S.tab));
   S.drawnTab=S.tab;
@@ -176,7 +175,7 @@ function render(){
 function vAll(){
   var t=today(),open=S.reqs.filter(function(r){return r.status!=="xong"});
   var late=open.filter(function(r){return r.due_date&&r.due_date<t}).length,wait=open.filter(function(r){return r.status==="cho_khach"}).length;
-  var stat=function(v,l,c){return '<div class="stat '+(c||"")+'"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'};
+  var stat=function(v,l,c){return '<div class="stat '+(c||"")+'"><div class="l">'+l.charAt(0).toUpperCase()+l.slice(1)+'</div><div class="v">'+v+'</div></div>'};
   var count=function(k){return S.clients.filter(function(c){return c.stage===k}).length};
   var h='<div class="stats">'+stat(S.clients.length,"khách hàng")+stat(count("dam_phan")+count("tiep_can"),"đang tiếp cận, đàm phán")+stat(count("thiet_lap")+count("van_hanh"),"đang thiết lập, vận hành")+stat(open.length,"yêu cầu đang mở")+stat(late,"yêu cầu quá hạn",late?"bad":"")+stat(wait,"chờ khách phản hồi",wait?"warn":"")+'</div>';
   if(!S.clients.length)return h+'<div class="empty">Chưa có khách hàng. Bấm + Khách hàng để thêm khách đầu tiên; mỗi khách sẽ có một tab riêng.</div>';
@@ -277,7 +276,7 @@ function bind(){
     if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("rq")){e.preventDefault();reqForm(byId(S.reqs,e.target.dataset.rq))}
   });
   window.addEventListener("focus",reload);
-  $("#signout").addEventListener("click",async function(){await sb.auth.signOut();location.reload()});
+  HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
 }
 
 /* ---------- đăng nhập ---------- */
@@ -298,7 +297,7 @@ function loginScreen(){
   var cur=await sb.auth.getSession(),session=cur.data&&cur.data.session;
   if(!session)session=await loginScreen();
   var email=String(session.user.email||"").toLowerCase();
-  $("#who").textContent=email;$("#signout").hidden=false;
+  HT.render({base:"../",active:"khach",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
   var r=await sb.from("core_roles").select("area,role").eq("email",email);
   var ok=!r.error&&(r.data||[]).some(function(x){return (x.area==="all"&&(x.role==="owner"||x.role==="admin"))||(x.area==="timus"&&(x.role==="owner"||x.role==="admin"))});
   if(!ok){$("#app").innerHTML='<div class="empty">Tài khoản này không có quyền xem trang khách hàng.</div>';return}

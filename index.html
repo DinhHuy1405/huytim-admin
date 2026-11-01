@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Huy Tim Quản trị</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>
 /* Trang chủ quản trị Huy Tim: kiểu Notion cơ bản, danh sách các business. Chỉ có giao diện sáng. */
 :root{color-scheme:light;--bg:#FFFFFF;--ink:#37352F;--muted:#5F5E5B;--soft:#787774;--faint:#9B9A97;--line:#E9E9E7;--hover:#F7F6F3;
@@ -36,47 +36,33 @@ a.biz:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 div.biz{color:var(--soft)}
 .note{color:var(--soft);font-size:13px;margin-top:24px}
 </style>
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="theme.css?v=4">
 </head>
 <body>
+<aside id="side" class="nsb" aria-label="Điều hướng"></aside>
 <div class="wrap">
-  <header>
-    <div class="ws"><i>H</i>Huy Tim</div>
-    <h1>Quản trị</h1>
-    <p class="sub">Một chỗ để vào các business của Huy Tim. Mỗi business có dữ liệu và quyền truy cập riêng.</p>
-  </header>
-  <h2>Công việc</h2>
-  <div class="list" style="margin-bottom:28px">
-    <a class="biz" href="viec/">
-      <div class="top"><b>To do</b><span class="tg ok">Đang chạy</span></div>
-      <p>Mọi việc của Huy ở một chỗ, chia 3 cột Todo, Doing, Done. Các chat tạo việc thẳng vào đây.</p>
-      <small>Chỉ chủ hệ thống xem được</small>
-    </a>
+  <header class="bar"><h1>Trang chủ <span class="cnt">5</span></h1></header>
+  <div class="stats">
+    <div class="stat"><div class="l">Đang chạy</div><div class="v">3</div></div>
+    <div class="stat"><div class="l">Trang riêng</div><div class="v">1</div></div>
+    <div class="stat"><div class="l">Sắp gắn</div><div class="v">1</div></div>
   </div>
-  <h2>Business</h2>
-  <div class="list">
-    <a class="biz" href="timus/">
-      <div class="top"><b>TIMUS Vận hành</b><span class="tg ok">Đang chạy</span></div>
-      <p>Shop Shopee, Lazada, TikTok Shop, Amazon tại Việt Nam và Mỹ: nhân viên, lịch ca, công việc, ghi chú, số liệu, phí khách hàng.</p>
-      <small>Nhân viên TIMUS đăng nhập bằng email được cấp quyền</small>
-    </a>
-    <a class="biz" href="khach/">
-      <div class="top"><b>TIMUS Customers</b><span class="tg ok">Đang chạy</span></div>
-      <p>Mỗi khách hàng một tab: giai đoạn, yêu cầu, tiến độ và bước tiếp theo.</p>
-      <small>Chỉ admin TIMUS xem được</small>
-    </a>
-    <a class="biz" href="https://mentor.huytim.com" target="_blank" rel="noopener">
-      <div class="top"><b>Academy</b><span class="tg info">Trang riêng</span></div>
-      <p>Theo dõi học viên mentor Việt Nam và US, lịch họp, tài liệu.</p>
-      <small>Đang ở mentor.huytim.com, sẽ gắn vào đây sau</small>
-    </a>
-    <div class="biz" aria-disabled="true">
-      <div class="top"><b>Landing</b><span class="tg mute">Sắp gắn</span></div>
-      <p>Công cụ tính giá, phí sàn, phí ship trên huytim.com.</p>
-      <small>Chuyển dữ liệu về hệ thống chung ở bước sau</small>
-    </div>
-  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Trang</th><th>Việc làm được</th><th>Trạng thái</th><th>Ai xem được</th></tr></thead>
+    <tbody>
+      <tr class="biz-row" data-href="viec/"><td><a href="viec/"><i class="dot" style="background:var(--faint)"></i>To do</a></td><td class="t2">Mọi việc của Huy ở một chỗ, chia 3 cột Todo, Doing, Done. Các chat tạo việc thẳng vào đây.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Chủ hệ thống</td></tr>
+      <tr class="biz-row" data-href="timus/"><td><a href="timus/"><i class="dot" style="background:var(--faint)"></i>TIMUS Vận hành</a></td><td class="t2">Shop Shopee, Lazada, TikTok Shop, Amazon tại Việt Nam và Mỹ: nhân viên, lịch ca, công việc, số liệu, phí khách hàng.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Email được cấp quyền</td></tr>
+      <tr class="biz-row" data-href="khach/"><td><a href="khach/"><i class="dot" style="background:var(--faint)"></i>TIMUS Customers</a></td><td class="t2">Mỗi khách hàng một tab: giai đoạn, yêu cầu, tiến độ và bước tiếp theo.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Admin TIMUS</td></tr>
+      <tr class="biz-row" data-href="https://mentor.huytim.com"><td><a href="https://mentor.huytim.com" target="_blank" rel="noopener"><i class="dot" style="background:var(--faint)"></i>Academy</a></td><td class="t2">Theo dõi học viên mentor Việt Nam và US, lịch họp, tài liệu.</td><td><span class="tg">Trang riêng</span></td><td class="t2">Mentor và học viên</td></tr>
+      <tr><td class="t1" style="color:var(--soft)"><i class="dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:10px;background:var(--faint)"></i>Landing</td><td class="t2">Công cụ tính giá, phí sàn, phí ship trên huytim.com.</td><td><span class="tg">Sắp gắn</span></td><td class="t2">Chưa áp dụng</td></tr>
+    </tbody>
+  </table></div>
   <p class="note">Dữ liệu lưu trên Supabase của Huy Tim. Mỗi người chỉ thấy business mình được cấp quyền.</p>
 </div>
+<script src="shell.js?v=2"></script>
+<script>
+HT.render({base:"",active:"home"});
+document.addEventListener("click",function(e){var r=e.target.closest(".biz-row");if(r&&!e.target.closest("a")){var u=r.dataset.href;if(/^https/.test(u))window.open(u,"_blank","noopener");else location.href=u}});
+</script>
 </body>
 </html>

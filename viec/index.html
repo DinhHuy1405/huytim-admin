@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Huy Tim To do</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>
 /* Bảng To do của Huy: kiểu Notion cơ bản, 3 cột Todo, Doing, Done. Chỉ có giao diện sáng. */
 :root{color-scheme:light;--bg:#FFFFFF;--side:#F7F7F5;--ink:#37352F;--muted:#5F5E5B;--soft:#787774;--faint:#9B9A97;--line:#E9E9E7;--line2:#DFDFDD;--hover:#F7F6F3;--hover2:#EFEFED;
@@ -94,17 +94,17 @@ label.f.w{grid-column:1/-1}
 .login-card h1{font-size:26px}.login-card p{margin:0;color:var(--muted);font-size:14px}.login-card .btn{height:38px}
 @media (prefers-reduced-motion:reduce){.toast,.col{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=2">
+<link rel="stylesheet" href="../theme.css?v=4">
 </head>
 <body>
+<aside id="side" class="nsb" aria-label="Điều hướng"></aside>
 <div class="wrap">
-  <header>
-    <div class="top"><div class="ws"><i>H</i>Huy Tim</div><div class="r"><a href="../">Tất cả business</a><span id="who"></span><button class="btn sm" id="signout" hidden>Đăng xuất</button></div></div>
-    <h1>To do</h1>
-  </header>
+  <header class="bar"><h1>To do <span class="cnt" id="pcount"></span></h1></header>
   <main id="app" hidden>
     <div class="stats" id="stats"></div>
-    <details class="inp"><summary>Thêm việc mới</summary><div class="inner"><form class="qa" id="qa">
+    <div class="utabs" id="filters"></div>
+    <div class="tbar" id="tbar"></div>
+    <details class="inp" id="addbox"><summary>Thêm việc mới</summary><div class="inner"><form class="qa" id="qa">
       <input id="qa-title" placeholder="Thêm việc mới, ví dụ: Chấm bài tuần 2 của học viên" aria-label="Việc mới" autocomplete="off" required>
       <select id="qa-area" aria-label="Mảng"></select>
       <input id="qa-project" placeholder="Dự án" aria-label="Dự án" autocomplete="off">
@@ -112,16 +112,17 @@ label.f.w{grid-column:1/-1}
       <input id="qa-due" type="date" aria-label="Hạn">
       <button class="btn primary" type="submit">Thêm việc</button>
     </form></div></details>
-    <div class="filters" id="filters"></div>
-    <div class="board" id="board"></div>
+    <div id="board"></div>
   </main>
   <div id="msg"></div>
 </div>
 <div id="drawerRoot"></div>
+<div class="bulk" id="bulk" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="../timus/config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+<script src="../shell.js?v=2"></script>
 <script>
 (function(){
 "use strict";
@@ -130,7 +131,8 @@ var PRIO={cao:["Cao","pill bad",0],thuong:["Thường","pill",1],thap:["Thấp",
 var STATUS=[["todo","Todo"],["doing","Doing"],["done","Done"]];
 var FLAG={cho_duyet:["Chờ duyệt","pill warn"],dang_ket:["Đang kẹt","pill bad"]};
 var DOING_MAX=3,DONE_SHOW=20;
-var S={rows:[],area:"",q:"",allDone:false,editing:null,delArm:false};
+var S={rows:[],area:"",q:"",allDone:false,editing:null,delArm:false,view:"board",sel:{},bulkArm:false};
+try{if(localStorage.getItem("ht-todo-view")==="list")S.view="list"}catch(_){}
 var sb=null;
 
 var $=function(s,r){return (r||document).querySelector(s)};
@@ -183,8 +185,9 @@ function render(){
   var kept=open.filter(function(x){return x.flag}).length;
   var dn7=list.filter(function(x){return x.done_at&&Date.now()-Date.parse(x.done_at)<7*864e5}).length;
   var doing=list.filter(function(x){return x.status==="doing"}).length;
-  var stat=function(v,l,c){return '<div class="stat '+(c||"")+'"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'};
-  $("#stats").innerHTML=stat(list.filter(function(x){return x.status==="todo"}).length,"việc cần làm")+stat(doing+"/"+DOING_MAX,"đang làm",doing>DOING_MAX?"bad":"")+stat(over,"việc quá hạn",over?"bad":"")+stat(kept,"chờ duyệt, đang kẹt",kept?"warn":"")+stat(dn7,"xong 7 ngày qua");
+  var stat=function(v,l,c){return '<div class="stat '+(c||"")+'"><div class="l">'+l+'</div><div class="v">'+v+'</div></div>'};
+  $("#pcount").textContent=open.length;
+  $("#stats").innerHTML=stat(list.filter(function(x){return x.status==="todo"}).length,"Việc cần làm")+stat(doing+"/"+DOING_MAX,"Đang làm",doing>DOING_MAX?"bad":"")+stat(over,"Việc quá hạn",over?"bad":"")+stat(kept,"Chờ duyệt, đang kẹt",kept?"warn":"")+stat(dn7,"Xong 7 ngày qua");
   var f=S.q.toLowerCase();
   var vis=list.filter(function(x){
     if(S.area&&x.area!==S.area)return false;
@@ -192,6 +195,8 @@ function render(){
     return true;
   });
   var sortOpen=function(a,b){return (PRIO[a.priority][2]-PRIO[b.priority][2])||((a.due_date||"9")<(b.due_date||"9")?-1:(a.due_date||"9")>(b.due_date||"9")?1:0)};
+  if(S.view==="list"){$("#board").className="";$("#board").innerHTML=listView(vis,t,sortOpen);renderBulk();}
+  else{S.sel={};renderBulk();$("#board").className="board";
   $("#board").innerHTML=STATUS.map(function(s){
     var items=vis.filter(function(x){return x.status===s[0]});
     var extra="";
@@ -202,10 +207,52 @@ function render(){
     var count=s[0]==="doing"?'<span class="'+(doing>DOING_MAX?"over3":"")+'">'+items.length+'/'+DOING_MAX+'</span>':'<span>'+items.length+'</span>';
     return '<section class="col" data-s="'+s[0]+'"><h2><b>'+s[1]+'</b>'+count+'</h2>'+(items.length?items.map(function(x){return card(x,t)}).join(""):'<div class="empty">Trống</div>')+extra+'</section>';
   }).join("");
+  }
   if(S.editing&&!S.rows.some(function(r){return r.id===S.editing}))closeDrawer();
 }
+function listView(vis,t,sortOpen){
+  var rows=vis.filter(function(x){return x.status!=="done"}).sort(sortOpen).concat(vis.filter(function(x){return x.status==="done"}).sort(function(a,b){return (b.done_at||"")<(a.done_at||"")?-1:1}).slice(0,S.allDone?1e9:DONE_SHOW));
+  if(!rows.length)return '<div class="empty">Không có việc nào khớp bộ lọc.</div>';
+  var ids=rows.map(function(x){return x.id}),all=ids.every(function(i){return S.sel[i]});
+  return '<div class="tbl"><table><thead><tr><th class="chk"><input type="checkbox" id="sel-all" aria-label="Chọn tất cả"'+(all?" checked":"")+'></th><th>Việc</th><th>Mảng</th><th>Dự án</th><th>Trạng thái</th><th>Ưu tiên</th><th>Hạn</th></tr></thead><tbody>'
+   +rows.map(function(x){
+     var late=x.due_date&&x.due_date<t&&x.status!=="done";
+     return '<tr class="click'+(S.sel[x.id]?" sel":"")+'" data-id="'+x.id+'" tabindex="0"><td class="chk"><input type="checkbox" data-sel="'+x.id+'" aria-label="Chọn: '+esc(x.title)+'"'+(S.sel[x.id]?" checked":"")+'></td>'
+      +'<td><div class="t1">'+esc(x.title)+'</div>'+(x.next_step&&x.status!=="done"?'<div class="t2">Tiếp theo: '+esc(x.next_step)+'</div>':"")+'</td>'
+      +'<td><span class="'+AREA[x.area][1]+'">'+AREA[x.area][0]+'</span></td><td class="t2">'+esc(x.project||"")+'</td>'
+      +'<td><span class="pill '+(x.status==="done"?"ok":x.status==="doing"?"warn":"")+'">'+STATUS.filter(function(s){return s[0]===x.status})[0][1]+'</span>'+(x.flag?' <span class="'+FLAG[x.flag][1]+'">'+FLAG[x.flag][0]+'</span>':"")+'</td>'
+      +'<td>'+(x.priority==="cao"?'<span class="pill bad">Cao</span>':'<span class="t2">'+PRIO[x.priority][0]+'</span>')+'</td>'
+      +'<td class="'+(late?"late":"t2")+'">'+(x.due_date?dm(x.due_date)+(late?", trễ "+days(x.due_date,t)+" ngày":""):"")+'</td></tr>'}).join("")
+   +'</tbody></table></div>';
+}
+function selIds(){return Object.keys(S.sel).filter(function(k){return S.sel[k]&&S.rows.some(function(r){return r.id===k})})}
+function renderBulk(){
+  var n=selIds().length,b=$("#bulk");b.hidden=!n;if(!n){S.bulkArm=false;b.innerHTML="";return}
+  b.innerHTML='<span>Đã chọn: '+n+'</span>'+STATUS.map(function(s){return '<button type="button" data-bulk="'+s[0]+'">'+s[1]+'</button>'}).join("")+'<i></i><button type="button" data-bulk="del">'+HT.ic("trash").replace('class="ic"','class="ic" width="14" height="14"')+(S.bulkArm?"Bấm lần nữa để xóa":"Xóa")+'</button><button type="button" class="end" data-bulk="clear">Bỏ chọn</button>';
+}
+async function bulk(k){
+  if(k==="clear"){S.sel={};render();return}
+  var ids=selIds();if(!ids.length)return;
+  if(k==="del"){
+    if(!S.bulkArm){S.bulkArm=true;renderBulk();return}
+    var d=await sb.from("hub_todos").delete().in("id",ids).select("id");
+    if(d.error||(d.data||[]).length<ids.length){fail(d.error||{code:"42501"});load();return}
+    S.sel={};toast("Đã xóa "+ids.length+" việc");load();return
+  }
+  if(k==="doing"){
+    var moved=ids.filter(function(i){return S.rows.filter(function(r){return r.id===i})[0].status!=="doing"}).length;
+    if(S.rows.filter(function(x){return x.status==="doing"}).length+moved>DOING_MAX){toast("Doing chỉ giữ tối đa "+DOING_MAX+" việc, hãy chọn ít việc hơn.");return}
+  }
+  var r=await sb.from("hub_todos").update({status:k}).in("id",ids).select("id");
+  if(r.error||(r.data||[]).length<ids.length){fail(r.error||{code:"42501"});load();return}
+  S.sel={};toast("Đã chuyển "+ids.length+" việc");load();
+}
+function renderTbar(){
+  $("#tbar").innerHTML='<input id="f-q" type="search" placeholder="Tìm việc, dự án" aria-label="Tìm việc" value="'+esc(S.q)+'"><div class="seg" role="group" aria-label="Kiểu xem"><button type="button" data-view="board" class="'+(S.view==="board"?"on":"")+'">Bảng</button><button type="button" data-view="list" class="'+(S.view==="list"?"on":"")+'">Danh sách</button></div>';
+}
 function renderFilters(){
-  $("#filters").innerHTML='<button class="btn'+(!S.area?" on":"")+'" type="button" data-area="">Tất cả</button>'+Object.keys(AREA).map(function(k){return '<button class="btn'+(S.area===k?" on":"")+'" type="button" data-area="'+k+'">'+AREA[k][0]+'</button>'}).join("")+'<input id="f-q" type="search" placeholder="Tìm việc, dự án" aria-label="Tìm việc" value="'+esc(S.q)+'">';
+  $("#filters").innerHTML='<button class="btn'+(!S.area?" on":"")+'" type="button" data-area="">Tất cả</button>'+Object.keys(AREA).map(function(k){return '<button class="btn'+(S.area===k?" on":"")+'" type="button" data-area="'+k+'">'+AREA[k][0]+'</button>'}).join("");
+  renderTbar();
 }
 
 /* ---------- ngăn sửa việc ---------- */
@@ -264,15 +311,21 @@ function bind(){
     if(e.target.closest("[data-close]")){closeDrawer();return}
     if(e.target.id==="d-del"){delTodo();return}
     if(e.target.id==="alldone"){S.allDone=true;render();return}
-    if(e.target.closest("select"))return;
-    var c=e.target.closest(".card");if(c)openDrawer(c.dataset.id);
+    var bk=e.target.closest("[data-bulk]");if(bk){bulk(bk.dataset.bulk);return}
+    var vw=e.target.closest("[data-view]");if(vw){S.view=vw.dataset.view;try{localStorage.setItem("ht-todo-view",S.view)}catch(_){}renderTbar();render();return}
+    if(e.target.closest("select")||e.target.closest("input"))return;
+    var c=e.target.closest(".card,tr[data-id]");if(c)openDrawer(c.dataset.id);
   });
   document.addEventListener("submit",function(e){if(e.target.id==="d-form"){e.preventDefault();saveDrawer()}});
-  document.addEventListener("change",function(e){if(e.target.dataset.move)setStatus(e.target.dataset.move,e.target.value)});
+  document.addEventListener("change",function(e){
+    if(e.target.dataset.move)setStatus(e.target.dataset.move,e.target.value);
+    if(e.target.dataset.sel){S.sel[e.target.dataset.sel]=e.target.checked;S.bulkArm=false;render()}
+    if(e.target.id==="sel-all"){var on=e.target.checked;[].forEach.call(document.querySelectorAll("[data-sel]"),function(c){S.sel[c.dataset.sel]=on});S.bulkArm=false;render()}
+  });
   document.addEventListener("input",function(e){if(e.target.id==="f-q"){S.q=e.target.value;render()}});
   document.addEventListener("keydown",function(e){
     if(e.key==="Escape"&&S.editing){closeDrawer();return}
-    if((e.key==="Enter"||e.key===" ")&&e.target.classList&&e.target.classList.contains("card")){e.preventDefault();openDrawer(e.target.dataset.id)}
+    if((e.key==="Enter"||e.key===" ")&&e.target.classList&&(e.target.classList.contains("card")||e.target.tagName==="TR")){e.preventDefault();openDrawer(e.target.dataset.id)}
   });
   var dragId=null;
   document.addEventListener("dragstart",function(e){var c=e.target.closest&&e.target.closest(".card");if(!c)return;dragId=c.dataset.id;c.classList.add("drag");e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",dragId)});
@@ -280,7 +333,7 @@ function bind(){
   document.addEventListener("dragover",function(e){var c=e.target.closest&&e.target.closest(".col");if(c&&dragId){e.preventDefault();[].forEach.call(document.querySelectorAll(".col.over"),function(n){if(n!==c)n.classList.remove("over")});c.classList.add("over")}});
   document.addEventListener("drop",function(e){var c=e.target.closest&&e.target.closest(".col");if(c&&dragId){e.preventDefault();var id=dragId;dragId=null;c.classList.remove("over");setStatus(id,c.dataset.s)}});
   window.addEventListener("focus",reload);
-  $("#signout").addEventListener("click",async function(){await sb.auth.signOut();location.reload()});
+  HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
 }
 
 /* ---------- đăng nhập ---------- */
@@ -298,6 +351,7 @@ function loginScreen(){
     sb.auth.onAuthStateChange(function(ev,session){if(session)setTimeout(function(){box.remove();resolve(session)},0)});
   });
 }
+HT.render({base:"../",active:"viec"});
 (async function(){
   var cfg=window.TIMUS_CONFIG||{};
   if(!window.supabase||!cfg.supabaseUrl){$("#msg").textContent="Chưa tải được thư viện kết nối. Tải lại trang.";return}
@@ -305,7 +359,7 @@ function loginScreen(){
   var cur=await sb.auth.getSession(),session=cur.data&&cur.data.session;
   if(!session)session=await loginScreen();
   var email=String(session.user.email||"").toLowerCase();
-  $("#who").textContent=email;$("#signout").hidden=false;
+  HT.render({base:"../",active:"viec",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
   var r=await sb.from("core_roles").select("area,role").eq("email",email);
   var owner=!r.error&&(r.data||[]).some(function(x){return x.area==="all"&&x.role==="owner"});
   if(!owner){$("#msg").innerHTML='<p class="empty" style="font-size:15px">Tài khoản này không có quyền xem bảng To do.</p>';return}

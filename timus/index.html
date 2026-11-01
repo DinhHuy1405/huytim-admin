@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>TIMUS Vận hành</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>
 /* Layout: kiểu Notion cơ bản như trang quản lý mentor.huytim.com. Thanh bên trái cố định (điều hướng + shop theo thị trường), tiêu đề trang to canh trái, bảng gọn kiểu database, form mở ở ngăn bên phải. Chỉ có giao diện sáng, giống trang mentor. */
 :root{
@@ -307,13 +307,13 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 @media (max-width:640px){.filters input[type=search]{width:100%}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lbar{grid-column:1/-1;grid-row:2}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=2">
+<link rel="stylesheet" href="../theme.css?v=4">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
 <div class="wrap">
   <header class="bar">
-    <h1 id="ptitle">Tổng quan</h1>
+    <h1><span id="ptitle">Tổng quan</span> <span class="cnt" id="pcount"></span></h1>
     <div class="clocks" id="clocks"></div>
   </header>
   <div id="banner" class="banner" hidden></div>
@@ -326,6 +326,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 <script src="config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="store.js?v=8"></script>
+<script src="../shell.js?v=2"></script>
 <script>
 (function(){
 "use strict";
@@ -389,7 +390,7 @@ function mkTag(m){return '<span class="mk '+(m==="US"?"US":"VN")+'">'+(m==="US"?
 function opt(v,l,cur){return '<option value="'+esc(v)+'"'+(String(cur==null?"":cur)===String(v)?" selected":"")+'>'+esc(l)+'</option>'}
 
 /* ---------- trạng thái ---------- */
-var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],shopReports:[],dash:{report:"",basis:"p"},reports:[],repComments:[],sessions:[],kpi:[],docs:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
+var S={view:"mine",loaded:{},shops:[],staff:[],tasks:[],clients:[],taskNotes:[],notes:[],shopReports:[],dash:{report:"",basis:"p",from:"",to:"",chart:"bar"},reports:[],repComments:[],sessions:[],kpi:[],docs:[],owner:false,qa:{title:"",shop:"",due:"",prio:"normal",plan:"this"},settings:{},weeks:{},weekExists:{},metrics:{},pay:{},terms:{},
   myId:null,admin:false,readonly:false,week:weekStart(todayVN()),month:todayVN().slice(0,7),
   f:{shop:{q:"",market:"",platform:"",status:"",staff:""},task:{mine:false,staff:"",shop:"",q:"",showDone:false},rep:""}};
 var db=null,user=null,subs={},metricsUnsub=null,confirmKey=null,drawer=null;
@@ -503,31 +504,27 @@ function buildAlerts(){
 /* ---------- vẽ: thanh bên ---------- */
 function renderSide(){
   var cnt={mine:myTasks().filter(function(x){return x.status!=="done"}).length,shops:S.shops.filter(function(s){return s.status!=="stopped"}).length,staff:activeStaff().length,tasks:S.tasks.filter(function(t){return t.status!=="done"}).length,clients:S.clients.filter(function(c){return c.status!=="ended"}).length};
-  var grp=function(mk,lb){
-    var l=S.shops.filter(function(s){return s.status!=="stopped"&&(s.market==="US"?"US":"VN")===mk}).sort(function(a,b){return (a.name||"").localeCompare(b.name||"","vi")});
-    return l.length?'<h5>'+lb+'</h5>'+l.map(function(s){return '<a class="nsb-st'+(s.status==="paused"?" dim":"")+'" data-act="edit-shop" data-id="'+s.id+'" title="'+esc(s.name)+'"><span>'+esc(s.name)+'</span><small>'+esc(PF[s.platform]||"")+'</small></a>'}).join(""):"";
-  };
-  $("#side").innerHTML='<div class="ws"><i>H</i>Huy Tim</div><a href="../" class="dim"><span>Tất cả business</span></a><h5>TIMUS Vận hành</h5>'
-    +VIEWS.filter(function(v){return S.admin||v[0]!=="clients"}).map(function(v){return '<a href="#'+v[0]+'" data-view="'+v[0]+'"'+(S.view===v[0]?' aria-current="page"':"")+'><span>'+v[1]+'</span>'+(cnt[v[0]]?'<small>'+cnt[v[0]]+'</small>':"")+'</a>'}).join("")
-    +'<a data-act="tour" class="dim"><span>Hướng dẫn nhanh</span></a>'
-    +'<div class="nsb-st">'+grp("VN","Shop Việt Nam")+grp("US","Shop Mỹ")+'</div>'
-    +'<div class="who" id="who"></div>';
+  var ICON={mine:"check",reports:"file",guide:"book",overview:"grid",dashboard:"chart",shops:"store",staff:"users",schedule:"cal",tasks:"board",performance:"trend",clients:"brief"};
+    var groups=[{key:"timus",label:"TIMUS Vận hành",items:VIEWS.filter(function(v){return S.admin||v[0]!=="clients"}).map(function(v){return {label:v[1],href:"#"+v[0],icon:ICON[v[0]],current:S.view===v[0],attrs:'data-view="'+v[0]+'"',badge:cnt[v[0]]||""}})}];
+  [["VN","Shop Việt Nam"],["US","Shop Mỹ"]].forEach(function(g){
+    var l=S.shops.filter(function(s){return s.status!=="stopped"&&(s.market==="US"?"US":"VN")===g[0]}).sort(function(a,b){return (a.name||"").localeCompare(b.name||"","vi")});
+    if(l.length)groups.push({key:"shop"+g[0],label:g[1],items:l.map(function(s){return {label:s.name,title:s.name+" · "+(PF[s.platform]||""),dim:s.status==="paused",dot:"var(--faint)",attrs:'data-act="edit-shop" data-id="'+s.id+'"'}})});
+  });
+  var m=me(),acts=[];
+  if(S.admin)acts.push({icon:"gear",label:"Cài đặt",attrs:'data-act="settings"'});
+  if(S.myId)acts.push({icon:"out",label:"Đăng xuất",attrs:'data-act="signout"'});
+  HT.render({base:"../",active:"timus",groups:groups,owner:!!S.owner,admin:!!S.admin,user:{name:m?m.name:"",email:S.myId||"",actions:acts},foot:[{icon:"help",label:"Hướng dẫn",attrs:'data-act="tour"'}]});
+  var pc=$("#pcount");if(pc)pc.textContent=cnt[S.view]||"";
   $("#ptitle").textContent=(VIEWS.filter(function(v){return v[0]===S.view})[0]||VIEWS[0])[1];
-  renderWho();
 }
 function renderClocks(){
   var f=function(tz){return new Intl.DateTimeFormat("vi-VN",{timeZone:tz,hour:"2-digit",minute:"2-digit",hourCycle:"h23",weekday:"short",day:"2-digit",month:"2-digit"}).format(new Date())};
   $("#clocks").innerHTML='<span>Việt Nam <b>'+esc(f(TZ.VN))+'</b></span><span>New York <b>'+esc(f(TZ.NY))+'</b></span><span>Los Angeles <b>'+esc(f(TZ.LA))+'</b></span>';
 }
-function renderWho(){
-  var el=$("#who");if(!el)return;
-  var m=me(),email=S.myId||"";
-  el.innerHTML=(email?'<span>'+(m?'<b>'+esc(m.name)+'</b><br>':"")+esc(email)+'</span>':"")
-    +'<div class="acts">'+(S.admin?'<button class="btn sm" data-act="settings">Cài đặt</button>':"")+(email?'<button class="btn sm" data-act="signout">Đăng xuất</button>':"")+'</div>';
-}
+function renderWho(){renderSide()}
 
 /* ---------- vẽ: tổng quan ---------- */
-function stat(v,l,c){return '<div class="stat '+(c||"")+'"><div class="v">'+v+'</div><div class="l">'+l+'</div></div>'}
+function stat(v,l,c,x,dl){return '<div class="stat '+(c||"")+'"><div class="l">'+String(l).charAt(0).toUpperCase()+String(l).slice(1)+'</div><div class="v">'+v+'</div>'+(dl?'<div class="d">'+dl+'</div>':"")+(x||"")+'</div>'}
 function vOverview(){
   var t=todayVN();
   if(!S.shops.length&&!S.staff.length&&!S.clients.length)return onboarding();
@@ -538,12 +535,12 @@ function vOverview(){
   var over=open.filter(function(x){return x.due&&x.due<t}).length;
   var on=onShiftNow();
   var h='<div class="stats">'
-    +stat(act.length,"shop đang vận hành ("+vn+" VN · "+us+" US)","")
-    +stat(setup,"shop đang thiết lập",setup?"":"")
-    +stat(activeStaff().length,"nhân viên","")
-    +stat(on.length,"người đang trong ca",on.length?"ok":"warn")
-    +stat(open.length,"việc đang mở","")
-    +stat(over,"việc quá hạn",over?"bad":"ok")+'</div>';
+    +stat(act.length,"shop đang vận hành","","",vn+" VN · "+us+" US")
+    +stat(setup,"shop đang thiết lập","","")
+    +stat(activeStaff().length,"nhân viên","","")
+    +stat(on.length,"người đang trong ca",on.length?"ok":"warn","")
+    +stat(open.length,"việc đang mở","","")
+    +stat(over,"việc quá hạn",over?"bad":"ok","")+'</div>';
   var A=buildAlerts();
   h+='<div class="cols2"><section><h2 class="sec">Cần xử lý<span>'+(A.length?A.length+" mục":"")+'</span></h2>'
     +(A.length?'<div class="alerts">'+A.slice(0,12).map(function(a){return '<div class="alert '+a.tone+'"><span class="pill '+a.tone+'">'+(a.tone==="bad"?"Gấp":a.tone==="warn"?"Theo dõi":"Nhắc")+'</span><div class="msg">'+esc(a.t)+'<small>'+esc(a.d)+'</small></div><button class="btn sm" data-act="'+a.act+'" data-id="'+esc(a.id)+'">Xem</button></div>'}).join("")+(A.length>12?'<p class="note">Còn '+(A.length-12)+' mục khác.</p>':"")+'</div>':'<div class="empty">Không có gì cần xử lý gấp. Mọi shop đều có người phụ trách, không có việc quá hạn.</div>')
@@ -707,7 +704,7 @@ function vPerformance(){
   var totVN=0,totUS=0;
   ["VN","US"].forEach(function(mk){shops.filter(function(s){return (s.market==="US"?"US":"VN")===mk}).forEach(function(s){var v=num((S.metrics[s.id]||{}).netSales);if(mk==="US")totUS+=v;else totVN+=v})});
   var spend=0,sales=0;shops.forEach(function(s){var m=S.metrics[s.id]||{};spend+=toVND(m.adSpend,s.market);sales+=toVND(m.adSales,s.market)});
-  h+='<div class="stats">'+stat(fmtVND(totVN),"doanh thu thuần VN")+stat(fmtUSD(totUS),"doanh thu thuần US")+stat(fmtVND(totVN+totUS*fx()),"tổng quy đổi (tỷ giá "+fx().toLocaleString("vi-VN")+")")+stat(spend?(sales/spend).toFixed(2):"Chưa có","ROAS chung",spend?(sales/spend>=KPI.roas?"ok":"warn"):"")+'</div>';
+  h+='<div class="stats">'+stat(fmtVND(totVN),"doanh thu thuần VN")+stat(fmtUSD(totUS),"doanh thu thuần US")+stat(fmtVND(totVN+totUS*fx()),"tổng quy đổi","","","tỷ giá "+fx().toLocaleString("vi-VN"))+stat(spend?(sales/spend).toFixed(2):"Chưa có","ROAS chung",spend?(sales/spend>=KPI.roas?"ok":"warn"):"")+'</div>';
   ["VN","US"].forEach(function(mk){
     var rows=shops.filter(function(s){return (s.market==="US"?"US":"VN")===mk});
     if(!rows.length)return;
@@ -1156,16 +1153,34 @@ function dInsights(d,sum){
   return A;
 }
 function fmtHms(sec){var h=Math.floor(sec/3600),m=Math.round(sec%3600/60);return (h?h+" giờ ":"")+m+" phút"}
-function dChart(d,key,label){
-  var ci=d.daily.cols.indexOf(key),rows=d.daily.rows,W=900,H=230,L=46,R0=8,T=10,B=24;
+function dChart(rows,ci,oi,label,type){
+  var W=900,H=250,L=46,R0=type==="bar"?8:24,T=10,B=24,n=rows.length;
   var max=Math.max.apply(null,rows.map(function(r){return r[ci]||0}))||1,step=Math.pow(10,Math.floor(Math.log10(max)))/2;while(max/step>4)step*=2;var top=Math.ceil(max/step)*step;
-  var x=function(i){return L+(W-L-R0)*(rows.length<2?.5:i/(rows.length-1))},y=function(v){return T+(H-T-B)*(1-v/top)};
-  var line=rows.map(function(r,i){return (i?"L":"M")+x(i).toFixed(1)+" "+y(r[ci]||0).toFixed(1)}).join(" ");
-  var g="";for(var v=0;v<=top+1;v+=step)g+='<line x1="'+L+'" x2="'+(W-R0)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end">'+(v?tr(v).replace(" tr","tr"):"0")+'</text>';
-  var ticks=rows.map(function(r,i){return i%5===0?'<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle">'+fmtDM(r[0])+'</text>':""}).join("");
-  var hit=rows.map(function(r,i){var w=(W-L-R0)/Math.max(1,rows.length-1);return '<rect class="dhit" x="'+(x(i)-w/2)+'" y="'+T+'" width="'+w+'" height="'+(H-T-B)+'" fill="transparent" data-tip="'+fmtDM(r[0])+': '+vi(r[ci])+' ₫ · '+vi(r[key==="ps"?4:key==="cs"?5:6])+' đơn" data-x="'+x(i)+'" data-y="'+y(r[ci]||0)+'"/>'}).join("");
+  var sw=(W-L-R0)/n,x=type==="bar"?function(i){return L+sw*(i+.5)}:function(i){return L+(W-L-R0)*(n<2?.5:i/(n-1))},y=function(v){return T+(H-T-B)*(1-v/top)};
+  var g="";for(var v=0;v<=top+1;v+=step)g+='<line x1="'+L+'" x2="'+(W-R0)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(L-10)+'" y="'+(y(v)+4)+'" text-anchor="end">'+(v?tr(v).replace(" tr","tr"):"0")+'</text>';
+  var every=n>20?5:n>10?3:1,ticks=rows.map(function(r,i){return i%every===0?'<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle">'+fmtDM(r[0])+'</text>':""}).join("");
+  var marks="";
+  if(type==="bar"){
+    var bw=Math.min(26,sw*.66);
+    marks=rows.map(function(r,i){var yy=y(r[ci]||0),h=y(0)-yy;return (h>0?'<rect class="dbarh" data-i="'+i+'" x="'+(x(i)-bw/2)+'" y="'+yy+'" width="'+bw+'" height="'+h+'" rx="2" fill="#B8C9EE"/>':"")}).join("");
+  }else{
+    var line=rows.map(function(r,i){return (i?"L":"M")+x(i).toFixed(1)+" "+y(r[ci]||0).toFixed(1)}).join(" ");
+    marks='<path d="'+line+' L'+x(n-1)+' '+y(0)+' L'+x(0)+' '+y(0)+' Z" fill="#2C5FD4" fill-opacity=".05"/><path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>';
+  }
   var peak=rows.reduce(function(b,r,i){return (r[ci]||0)>(rows[b][ci]||0)?i:b},0);
-  return '<div class="dchart" id="dchart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Doanh số theo ngày, '+label+'">'+g+ticks+'<path d="'+line+' L'+x(rows.length-1)+' '+y(0)+' L'+x(0)+' '+y(0)+' Z" fill="var(--accent)" opacity=".08"/><path d="'+line+'" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/><circle cx="'+x(peak)+'" cy="'+y(rows[peak][ci])+'" r="4" fill="var(--accent)" stroke="#fff" stroke-width="2"/><text x="'+x(peak)+'" y="'+Math.max(12,y(rows[peak][ci])-9)+'" text-anchor="middle" style="fill:var(--ink)">'+tr(rows[peak][ci])+'</text><circle id="dmark" r="4" fill="var(--accent)" stroke="#fff" stroke-width="2" visibility="hidden"/>'+hit+'</svg></div>';
+  var hit=rows.map(function(r,i){var w=type==="bar"?sw:(W-L-R0)/Math.max(1,n-1);return '<rect class="dhit" x="'+(x(i)-w/2)+'" y="'+T+'" width="'+w+'" height="'+(H-T-B)+'" fill="transparent" data-i="'+i+'"'+(i===peak?" data-peak":"")+' data-d="'+fmtDM(r[0])+'" data-v="'+vi(r[ci])+' ₫" data-o="'+vi(r[oi])+' đơn" data-x="'+x(i)+'" data-y="'+y(r[ci]||0)+'"/>'}).join("");
+  return '<div class="dchart" id="dchart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Doanh số theo ngày, '+label+'">'+g+ticks+marks+'<line id="dline" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"/><circle id="dmark" r="4" fill="var(--accent)" stroke="#fff" stroke-width="2" visibility="hidden"/>'+hit+'</svg></div>';
+}
+function dShow(h){
+  var box=$("#dchart");if(!box||!h)return;var tip=$("#dtip"),mk=$("#dmark"),ln=$("#dline");
+  if(!tip){tip=document.createElement("div");tip.id="dtip";tip.className="dtip";box.appendChild(tip)}
+  var sv=box.querySelector("svg"),rc=sv.getBoundingClientRect(),br=box.getBoundingClientRect(),k=rc.width/900;
+  tip.innerHTML='<small>'+h.dataset.d+' · '+h.dataset.o+'</small><b>'+h.dataset.v+'</b>';
+  var px=rc.left-br.left+h.dataset.x*k;tip.style.left=px+"px";tip.style.top=(rc.top-br.top+h.dataset.y*k)+"px";
+  tip.style.transform=px>br.width-190?"translate(calc(-100% - 14px),-50%)":"";
+  mk.setAttribute("cx",h.dataset.x);mk.setAttribute("cy",h.dataset.y);mk.setAttribute("visibility","visible");
+  ln.setAttribute("x1",h.dataset.x);ln.setAttribute("x2",h.dataset.x);ln.setAttribute("visibility","visible");
+  [].forEach.call(box.querySelectorAll(".dbarh"),function(b){b.setAttribute("fill",b.dataset.i===h.dataset.i?"#2C5FD4":"#B8C9EE")});
 }
 function dBars(rows,fmt){var max=Math.max.apply(null,rows.map(function(r){return r[1]}))||1;return '<div class="dbars">'+rows.map(function(r){return '<div class="dbar"><span class="n" title="'+esc(r[0])+'">'+esc(r[0])+'</span><div class="t"><i style="width:'+Math.max(1,r[1]/max*100)+'%"></i></div><span class="v">'+fmt(r)+'</span></div>'}).join("")+'</div>'}
 function vDashboard(){
@@ -1173,13 +1188,22 @@ function vDashboard(){
   if(!r)return '<div class="empty">Chưa có số liệu shop. Khi có file Excel xuất từ Seller Center, số liệu sẽ hiện tại đây.</div>';
   var d=r.data,b=S.dash.basis,s=d.summary[b],lab={p:"Đơn đã đặt",c:"Đơn đã xác nhận",d:"Đơn đã thanh toán"}[b];
   var adsS=d.ads.reduce(function(a,x){return a+x[1]},0),adsC=d.ads.reduce(function(a,x){return a+x[4]},0),t=d.traffic;
-  var cr=s.orders?s.cancelled/s.orders*100:0;
-  var h='<div class="dtop"><div class="filters"><select id="dash-report" aria-label="Shop và kỳ">'+R2.list.map(function(x){return opt(x.id,shopName(x.shopId)+" · "+fmtDM(x.periodStart)+" đến "+fmtDM(x.periodEnd),r.id)}).join("")+'</select></div><div class="seg" role="group" aria-label="Loại đơn">'+[["p","Đã đặt"],["c","Đã xác nhận"],["d","Đã thanh toán"]].map(function(x){return '<button type="button" class="'+(b===x[0]?"on":"")+'" data-act="dash-basis" data-id="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div></div>';
-  h+='<div class="stats dstats">'+stat(tr(s.sales),"doanh số · "+lab.toLowerCase())+stat(vi(s.orders),"đơn hàng")+stat(vi(s.aov),"₫ mỗi đơn")+stat(vi(s.visits),"lượt truy cập")+stat(vi(s.cvr,2)+"%","chuyển đổi đơn hàng")+stat(vi(cr,1)+"%","tỷ lệ hủy ("+vi(s.cancelled)+" đơn)",cr>=10?"bad":"")+stat(adsC?vi(adsS/adsC,2):"Chưa có","ROAS quảng cáo")+stat(tr(adsC),"chi quảng cáo")+'</div>';
+  var D=d.daily.rows,D0=D[0][0],D1=D[D.length-1][0],from=S.dash.from||D0,to=S.dash.to||D1;
+  var rows=D.filter(function(x){return x[0]>=from&&x[0]<=to});if(!rows.length){rows=D;from=D0;to=D1}
+  var full=rows.length===D.length,i0=D.indexOf(rows[0]),prev=!full&&i0>=rows.length?D.slice(i0-rows.length,i0):null;
+  var ci={p:1,c:2,d:3}[b],oi={p:4,c:5,d:6}[b],sum=function(l,i){return l.reduce(function(a,x){return a+(x[i]||0)},0)};
+  var sales=full?s.sales:sum(rows,ci),orders=full?s.orders:sum(rows,oi),visits=full?s.visits:sum(rows,7),aov=orders?sales/orders:0,cvr=full?s.cvr:(visits?orders/visits*100:0);
+  var canc=full?s.cancelled:sum(rows,10),cbase=full?s.orders:sum(rows,4),cr=cbase?canc/cbase*100:0;
+  var sp=function(i){return HT.spark(rows.map(function(x){return x[i]||0}))};
+  var dl=function(cur,pv,rev){if(!prev||!pv)return "";var p=(cur-pv)/pv*100,bad=rev?p>0:p<0;return '<b class="'+(bad?"dn":"")+'">'+(p>0?"+":"")+vi(p,1)+'%</b> so với kỳ trước'};
+  var h='<div class="dtop"><div class="filters"><select id="dash-report" aria-label="Shop và kỳ">'+R2.list.map(function(x){return opt(x.id,shopName(x.shopId)+" · "+fmtDM(x.periodStart)+" đến "+fmtDM(x.periodEnd),r.id)}).join("")+'</select></div><div class="filters"><button type="button" class="rbtn" id="dash-range" data-act="dash-range">'+HT.ic("cal")+fmtDM(from)+' đến '+fmtDM(to)+'</button><span class="dlab">'+(prev?"so với kỳ liền trước":full?"cả kỳ báo cáo":"đầu kỳ, chưa có kỳ để so")+'</span><div class="seg" role="group" aria-label="Loại đơn">'+[["p","Đã đặt"],["c","Đã xác nhận"],["d","Đã thanh toán"]].map(function(x){return '<button type="button" class="'+(b===x[0]?"on":"")+'" data-act="dash-basis" data-id="'+x[0]+'">'+x[1]+'</button>'}).join("")+'</div></div></div>';
+  h+='<div class="stats dstats">'+stat(tr(sales),"Doanh số","",sp(ci),dl(sales,prev&&sum(prev,ci)))+stat(vi(orders),"Đơn hàng","",sp(oi),dl(orders,prev&&sum(prev,oi)))+stat(vi(aov),"Giá trị mỗi đơn (₫)","","",dl(aov,prev&&sum(prev,oi)?sum(prev,ci)/sum(prev,oi):0))+stat(vi(visits),"Lượt truy cập","",sp(7),dl(visits,prev&&sum(prev,7)))
+    +stat(vi(cvr,2)+"%","Chuyển đổi đơn hàng","","")+stat(vi(cr,1)+"%","Tỷ lệ hủy ("+vi(canc)+" đơn)",cr>=10?"bad":"","")+stat(adsC?vi(adsS/adsC,2):"Chưa có","ROAS"+(full?"":" cả kỳ"),"","")+stat(tr(adsC),"Chi quảng cáo"+(full?"":" cả kỳ"),"","")+'</div>';
+  requestAnimationFrame(function(){if(innerWidth>700)dShow($(".dhit[data-peak]"))});
+  h+='<section class="dsec"><div class="chead"><h2 class="sec">Doanh số theo ngày <span>'+lab+'</span></h2><div class="seg" role="group" aria-label="Kiểu biểu đồ"><button type="button" class="'+(S.dash.chart==="bar"?"on":"")+'" data-act="dash-chart" data-id="bar" aria-label="Biểu đồ cột">'+HT.ic("bars")+'</button><button type="button" class="'+(S.dash.chart==="line"?"on":"")+'" data-act="dash-chart" data-id="line" aria-label="Biểu đồ đường">'+HT.ic("line")+'</button></div></div>'+dChart(rows,ci,oi,lab,S.dash.chart)
+   +'<details class="dn"><summary>Xem bảng số liệu theo ngày</summary><div class="tbl"><table><thead><tr><th>Ngày</th><th class="num">Đã đặt</th><th class="num">Đã xác nhận</th><th class="num">Đã thanh toán</th><th class="num">Đơn đặt</th><th class="num">Đơn hủy</th><th class="num">Truy cập</th></tr></thead><tbody>'+rows.map(function(x){return '<tr><td>'+fmtDM(x[0])+'</td><td class="num">'+vi(x[1])+'</td><td class="num">'+vi(x[2])+'</td><td class="num">'+vi(x[3])+'</td><td class="num">'+vi(x[4])+'</td><td class="num">'+vi(x[10])+'</td><td class="num">'+vi(x[7])+'</td></tr>'}).join("")+'</tbody></table></div></details></section>';
   var ins=dInsights(d);
-  if(ins.length)h+='<h2 class="sec">Cần chú ý<span>tự tính từ số liệu kỳ này</span></h2><div class="alerts">'+ins.map(function(a){return '<div class="alert '+a[0]+'" style="grid-template-columns:auto minmax(0,1fr)"><span class="pill '+a[0]+'">'+(a[0]==="bad"?"Gấp":a[0]==="warn"?"Theo dõi":"Gợi ý")+'</span><div class="msg">'+esc(a[1])+'<small>'+esc(a[2])+'</small></div></div>'}).join("")+'</div>';
-  h+='<section class="dsec"><h2 class="sec">Doanh số theo ngày<span>'+lab+'</span></h2>'+dChart(d,{p:"ps",c:"cs",d:"ds"}[b],lab)
-   +'<details class="dn"><summary>Xem bảng số liệu theo ngày</summary><div class="tbl"><table><thead><tr><th>Ngày</th><th class="num">Đã đặt</th><th class="num">Đã xác nhận</th><th class="num">Đã thanh toán</th><th class="num">Đơn đặt</th><th class="num">Đơn hủy</th><th class="num">Truy cập</th></tr></thead><tbody>'+d.daily.rows.map(function(x){return '<tr><td>'+fmtDM(x[0])+'</td><td class="num">'+vi(x[1])+'</td><td class="num">'+vi(x[2])+'</td><td class="num">'+vi(x[3])+'</td><td class="num">'+vi(x[4])+'</td><td class="num">'+vi(x[10])+'</td><td class="num">'+vi(x[7])+'</td></tr>'}).join("")+'</tbody></table></div></details></section>';
+  if(ins.length)h+='<section class="dsec"><h2 class="sec">Cần chú ý</h2><div class="alerts">'+ins.map(function(a){return '<div class="alert '+a[0]+'" style="grid-template-columns:auto minmax(0,1fr)"><span class="pill '+a[0]+'">'+(a[0]==="bad"?"Gấp":a[0]==="warn"?"Theo dõi":"Gợi ý")+'</span><div class="msg">'+esc(a[1])+'<small>'+esc(a[2])+'</small></div></div>'}).join("")+'</div></section>';
   var ch=d.channels;
   h+='<div class="cols2 dsec"><section><h2 class="sec">Doanh số theo nguồn<span>đơn đã đặt</span></h2>'+dBars([["Thẻ sản phẩm",ch.card],["Tiếp thị liên kết",ch.aff],["Video của shop",ch.video],["Livestream",ch.live]],function(x){return tr(x[1])})+'<h2 class="sec" style="margin-top:22px">Trong thẻ sản phẩm</h2>'+dBars(d.sources.slice().sort(function(a,c){return c[1]-a[1]}).filter(function(x){return x[1]}).slice(0,5),function(x){return tr(x[1])+" · "+vi(x[5],1)+"%"})+'</section>'
    +'<section><h2 class="sec">Quảng cáo<span>ROAS '+(adsC?vi(adsS/adsC,2):"")+'</span></h2><div class="tbl"><table style="min-width:0"><thead><tr><th>Chiến dịch</th><th class="num">Chi</th><th class="num">Doanh số</th><th class="num">ROAS</th></tr></thead><tbody>'+d.ads.map(function(x){return '<tr><td>'+esc(x[0])+'</td><td class="num">'+tr(x[4])+'</td><td class="num">'+tr(x[1])+'</td><td class="num">'+vi(x[5],2)+'</td></tr>'}).join("")+'</tbody></table></div><p class="note">Doanh số quảng cáo trùng một phần với các nguồn bên trái, không cộng dồn.</p>'
@@ -1542,6 +1566,9 @@ document.addEventListener("click",async function(e){
     case "signout":if(window.TIMUS_AUTH)TIMUS_AUTH.signOut();return;
     case "help":openHelp(id);return;
     case "dash-basis":S.dash.basis=id;render(true);return;
+    case "dash-chart":S.dash.chart=id;render(true);return;
+    case "dash-range":{var rr=dRep().r,dd=rr.data.daily.rows,D0=dd[0][0],D1=dd[dd.length-1][0],day=function(n){return dd[Math.max(0,dd.length-n)][0]},mid=dd[Math.floor(dd.length/2)][0];
+      HT.range({anchor:$("#dash-range"),from:S.dash.from||D0,to:S.dash.to||D1,min:D0,max:D1,presets:[["Cả kỳ",D0,D1],["7 ngày cuối",day(7),D1],["14 ngày cuối",day(14),D1],["3 ngày cuối",day(3),D1],["Nửa đầu kỳ",D0,mid],["Nửa cuối kỳ",mid,D1]],onApply:function(f,t){S.dash.from=f;S.dash.to=t;render(true)}});return}
     case "doc-open":openDoc(id);return;
     case "doc-up":uploadDoc(id);return;
     case "doc-del":
@@ -1591,13 +1618,8 @@ document.addEventListener("keydown",function(e){
 });
 window.addEventListener("scroll",closePop,{passive:true});
 document.addEventListener("mousemove",function(e){
-  var box=$("#dchart");if(!box)return;var tip=$("#dtip"),mk=$("#dmark"),h=e.target.closest&&e.target.closest(".dhit");
-  if(!h){if(tip)tip.hidden=true;if(mk)mk.setAttribute("visibility","hidden");return}
-  if(!tip){tip=document.createElement("div");tip.id="dtip";tip.className="dtip";box.appendChild(tip)}
-  var sv=box.querySelector("svg"),rc=sv.getBoundingClientRect(),br=box.getBoundingClientRect(),k=rc.width/900;
-  tip.hidden=false;tip.textContent=h.dataset.tip;
-  var px=rc.left-br.left+h.dataset.x*k,w=tip.offsetWidth/2;tip.style.left=Math.min(br.width-w-4,Math.max(w+4,px))+"px";tip.style.top=(rc.top-br.top+h.dataset.y*k-10)+"px";
-  mk.setAttribute("cx",h.dataset.x);mk.setAttribute("cy",h.dataset.y);mk.setAttribute("visibility","visible");
+  if(!$("#dchart"))return;var h=e.target.closest&&e.target.closest(".dhit");
+  if(h||innerWidth>700)dShow(h||$(".dhit[data-peak]"));
 });
 window.addEventListener("hashchange",function(){var h=(location.hash||"").replace("#","");if(R[h]&&h!==S.view){S.view=h;closePop();render(true);window.scrollTo(0,0)}});
 document.addEventListener("toggle",function(e){if(e.target.dataset&&e.target.dataset.key==="qa")S.qaOpen=e.target.open},true);
@@ -1611,7 +1633,7 @@ document.addEventListener("change",async function(e){
   var t=e.target;
   var m={"fs-market":["shop","market"],"fs-platform":["shop","platform"],"fs-status":["shop","status"],"fs-staff":["shop","staff"],"ft-staff":["task","staff"],"ft-shop":["task","shop"]}[t.id];
   if(m){S.f[m[0]][m[1]]=t.value;render(true);return}
-  if(t.id==="dash-report"){S.dash.report=t.value;render(true);return}
+  if(t.id==="dash-report"){S.dash.report=t.value;S.dash.from=S.dash.to="";render(true);return}
   var qa={"qa-shop":"shop","qa-prio":"prio","qa-due":"due","qa-plan":"plan"}[t.id];if(qa){S.qa[qa]=t.value;return}
   if(t.id==="perfMonth"&&t.value){S.month=t.value;watchMonth();render(true);return}
   if(t.dataset.metric){t.dataset.dirty="";saveMetric(t);return}
