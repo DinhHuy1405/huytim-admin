@@ -1,6 +1,7 @@
 # Huy Tim Quản trị
 
 Trang quản trị chung cho các business của Huy Tim. Trang chủ (`index.html`) liệt kê các business; mỗi business một thư mục:
+- `theme.css`: giao diện chung (Geist, xanh #1E4EED, khung lưới), nạp sau style riêng của từng trang.
 - `viec/`: bảng To do của Huy (Todo, Doing, Done), đọc ghi `public.hub_todos`, các chat tạo việc qua hàm `public.hub_add_todo`. Chỉ owner toàn hệ thống xem được.
 - `khach/`: TIMUS Customers, mỗi khách hàng một tab (giai đoạn, yêu cầu, tiến độ). Chỉ admin TIMUS xem được.
 - `timus/`: TIMUS Vận hành (đang chạy).

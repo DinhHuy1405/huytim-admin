@@ -1,0 +1,75 @@
+/* Giao diện chung Huy Tim: nền trắng, khung lưới đường kẻ mảnh, xanh dương đậm, chữ Geist.
+   Nạp sau style riêng của từng trang để ghi đè. Chỉ có giao diện sáng. */
+:root{
+  --bg:#FFFFFF; --side:#FAFAFC; --ink:#09090B; --muted:#52525B; --soft:#71717A; --faint:#A1A1AA;
+  --line:#E7E8EE; --line2:#D8DAE3; --hover:#F6F8FE; --hover2:#EEF2FD; --sel:#E6ECFD;
+  --accent:#1E4EED; --accent-hover:#173FC4; --accent-ink:#FFFFFF; --focus:#1E4EED; --navy:#15237A; --sky:#98B5EF; --sand:#D3CCA7; --olive:#A09E62; --cocoa:#593D29;
+  --ok:#14532D; --ok-bg:#DCF3E4; --warn:#593D29; --warn-bg:#F1ECD6; --bad:#8F1D18; --bad-bg:#FDE6E3;
+  --info:#15237A; --info-bg:#E6ECFD; --night:#15237A; --night-bg:#D6E1FA; --mute:#3F3F46; --mute-bg:#EFEFF3;
+  --bad-num:#C8322A; --warn-num:#8A6D3B; --ok-num:#1F7A4D;
+  --blk-bad:#FDEEEC; --blk-warn:#F8F5E8; --blk-info:#EEF2FD;
+  --font:Geist,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --r:6px;
+}
+body{letter-spacing:-.005em}
+h1,header.bar h1{font-weight:500;letter-spacing:-.03em}
+h2,h2.sec{font-weight:500;letter-spacing:-.015em}
+.ws i,.nsb .ws i,.login-card .ws i{background:var(--accent);border-radius:5px}
+
+/* nút */
+.btn{border-radius:6px;box-shadow:0 1px 2px rgba(9,9,11,.05)}
+.btn.primary{background:var(--accent);border-color:var(--accent-hover);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 1px 2px rgba(21,35,122,.25)}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--navy)}
+.btn.on{background:var(--sel);border-color:var(--sky);color:var(--navy);font-weight:500}
+
+/* khung lưới */
+.stats{gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;margin:0 -1px -1px 0;padding:14px 16px}
+.stat .v{font-weight:500;letter-spacing:-.02em}
+.panel,.pcard,.biz,.qa,details.inp,.login-card,.tour{border-color:var(--line);border-radius:8px}
+.pcard:hover,a.biz:hover{background:var(--hover);border-color:var(--sky)}
+.tbl{border:1px solid var(--line);border-radius:8px}
+th{background:var(--side);border-top:0}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover,tbody tr.click:hover{background:var(--hover)}
+
+/* thanh bên */
+.nsb{background:#fff}
+.nsb a:hover{background:var(--hover)}
+.nsb a[aria-current="page"]{background:var(--sel);color:var(--navy)}
+.nsb h5{letter-spacing:.02em}
+
+/* tab */
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tabs button:hover{background:var(--hover)}
+
+/* nhãn */
+.pill{border-radius:4px}
+.mk{border-radius:4px}
+
+/* khối thông báo */
+.alert{border-radius:6px}
+.next{background:var(--blk-warn);border-radius:6px}
+.card .next{background:none;border-radius:0;padding:0;margin:0}
+
+/* bảng việc */
+.col,.colk{background:var(--side);border:1px solid var(--line);border-radius:8px}
+.col.over{background:var(--hover2);border-color:var(--sky)}
+.card{border-radius:6px;box-shadow:0 0 0 1px var(--line),0 1px 2px rgba(9,9,11,.04)}
+.card:hover{background:#fff;box-shadow:0 0 0 1px var(--sky),0 2px 6px rgba(30,78,237,.08)}
+
+/* giai đoạn khách hàng */
+.track button{border-radius:4px;background:var(--mute-bg)}
+.track button.past{background:var(--info-bg);color:var(--navy)}
+.track button.cur{background:var(--accent);color:#fff}
+
+/* ô nhập */
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+.f input:focus,.f select:focus,.f textarea:focus{box-shadow:0 0 0 3px rgba(30,78,237,.14)}
+.bar i.a,.lbar i.a{background:var(--accent)}.bar i.b,.lbar i.b{background:var(--sky)}
+.bar,.lbar{background:var(--hover2)}
+
+/* trang chủ */
+.tg.ok{background:var(--info-bg);color:var(--navy)}
+.tg.info{background:var(--blk-warn);color:var(--cocoa)}
+.tg{border-radius:4px}
