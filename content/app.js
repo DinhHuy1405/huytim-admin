@@ -183,7 +183,10 @@ function vUpdate(){
    +'<section class="dsec"><h2 class="sec">Nhập toàn bộ dữ liệu EDIT VIDEO</h2><p class="note" style="margin:0 0 10px">Chọn file content_seed.json trong thư mục Huy Tim/docs. Nhập lại nhiều lần cũng không bị trùng, nhưng sẽ ghi đè các dòng có sẵn trong file.</p><div class="imp"><label class="btn" for="seed-file">Chọn file gói dữ liệu</label><input id="seed-file" type="file" accept=".json" hidden></div></section><div id="imp-msg" class="note" role="status" style="white-space:pre-line"></div>';
 }
 function say(m){var e=$("#imp-msg");if(e)e.textContent=m}
-async function chunks(t,l,n){for(var i=0;i<l.length;i+=n){var r=await sb.from("content_"+t).upsert(l.slice(i,i+n),{onConflict:KEY[t]||"id"});if(r.error)throw r.error}}
+/* video trong gói có thể thiếu cột chữ: điền chuỗi rỗng vì các cột này không nhận giá trị trống */
+var VTEXT=["audio","brand","build","cover_path","edit_notes","kind","name","notes","output","promo","script","tiktok_url","title","updated_on"];
+function fillVideo(r){var o=Object.assign({},r);VTEXT.forEach(function(k){if(o[k]==null)o[k]=""});if(o.status==null)o.status="y_tuong";return o}
+async function chunks(t,l,n){if(t==="videos")l=l.map(fillVideo);for(var i=0;i<l.length;i+=n){var r=await sb.from("content_"+t).upsert(l.slice(i,i+n),{onConflict:KEY[t]||"id"});if(r.error)throw r.error}}
 async function importSeed(file){
   try{
     say("Đang đọc file...");var d=JSON.parse(await file.text());
