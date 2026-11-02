@@ -4,6 +4,7 @@ Trang quản trị chung cho các business của Huy Tim. Trang chủ (`index.ht
 - `theme.css`: giao diện chung (Geist, xanh #1E4EED, khung lưới), nạp sau style riêng của từng trang.
 - `viec/`: bảng To do của Huy (Todo, Doing, Done), đọc ghi `public.hub_todos`, các chat tạo việc qua hàm `public.hub_add_todo`. Chỉ owner toàn hệ thống xem được.
 - `khach/`: TIMUS Customers, mỗi khách hàng một tab (giai đoạn, yêu cầu, tiến độ). Chỉ admin TIMUS xem được.
+- `content/`: Huy Tim Content: video, format, lệnh, highlight, Collaboration (đối tác, quyền lợi, tài liệu). Chỉ admin Content xem được, tài liệu nằm trong kho riêng tư `content-media`.
 - `timus/`: TIMUS Vận hành (đang chạy).
 - Academy: đang ở mentor.huytim.com, gắn vào sau.
 - Landing: gắn vào sau.
