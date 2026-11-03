@@ -51,6 +51,7 @@ div.biz{color:var(--soft)}
     <thead><tr><th>Trang</th><th>Việc làm được</th><th>Trạng thái</th><th>Ai xem được</th></tr></thead>
     <tbody>
       <tr class="biz-row" data-href="viec/"><td><a href="viec/"><i class="dot" style="background:var(--faint)"></i>To do</a></td><td class="t2">Mọi việc của Huy ở một chỗ, chia 3 cột Todo, Doing, Done. Các chat tạo việc thẳng vào đây.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Chủ hệ thống</td></tr>
+      <tr class="biz-row" data-href="kiemsoat/"><td><a href="kiemsoat/"><i class="dot" style="background:var(--faint)"></i>Kiểm soát</a></td><td class="t2">Hồ sơ con số, lịch tháng, cờ rủi ro, chỉ số tháng và quyết định lớn của Huy</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Chủ hệ thống</td></tr>
       <tr class="biz-row" data-href="timus/"><td><a href="timus/"><i class="dot" style="background:var(--faint)"></i>TIMUS Vận hành</a></td><td class="t2">Shop Shopee, Lazada, TikTok Shop, Amazon tại Việt Nam và Mỹ: nhân viên, lịch ca, công việc, số liệu, phí khách hàng.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Email được cấp quyền</td></tr>
       <tr class="biz-row" data-href="khach/"><td><a href="khach/"><i class="dot" style="background:var(--faint)"></i>TIMUS Customers</a></td><td class="t2">Mỗi khách hàng một tab: giai đoạn, yêu cầu, tiến độ và bước tiếp theo.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Admin TIMUS</td></tr>
       <tr class="biz-row" data-href="content/"><td><a href="content/"><i class="dot" style="background:var(--faint)"></i>Content</a></td><td class="t2">Kho video, format, lệnh tạo video, số liệu TikTok và các highlight để cải thiện video.</td><td><span class="tg ok">Đang chạy</span></td><td class="t2">Chủ hệ thống</td></tr>
@@ -60,7 +61,7 @@ div.biz{color:var(--soft)}
   </table></div>
   <p class="note">Dữ liệu lưu trên Supabase của Huy Tim. Mỗi người chỉ thấy business mình được cấp quyền.</p>
 </div>
-<script src="shell.js?v=4"></script>
+<script src="shell.js?v=6"></script>
 <script>
 HT.render({base:"",active:"home"});
 document.addEventListener("click",function(e){var r=e.target.closest(".biz-row");if(r&&!e.target.closest("a")){var u=r.dataset.href;if(/^https/.test(u))window.open(u,"_blank","noopener");else location.href=u}});
