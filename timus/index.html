@@ -308,7 +308,7 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 @media (max-width:640px){.filters input[type=search]{width:100%}.lrow{grid-template-columns:minmax(0,1fr) auto}.lrow .lbar{grid-column:1/-1;grid-row:2}}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=8">
+<link rel="stylesheet" href="../theme.css?v=9">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -335,7 +335,14 @@ details.dn{margin-top:4px}details.dn summary{cursor:pointer;color:var(--soft);fo
 /* ---------- danh mục ---------- */
 /* nhân viên chỉ thấy các trang này; muốn bật lại Báo cáo thì thêm "reports" */
 var STAFF_VIEWS=["mine","logs","dashboard","guide"];
-var VIEWS=[["mine","Việc của tôi"],["logs","Nhật ký"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["dashboard","Dashboard"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["company","Hồ sơ công ty"],["clients","Khách hàng"]];
+/* tab con: trang cha hiện tab ở đầu, trang con không hiện ở thanh bên */
+var SUBTABS={staff:[["staff","Nhân viên"],["schedule","Lịch ca"]],logs:[["logs","Nhật ký"],["reports","Báo cáo và đánh giá"]],dashboard:[["dashboard","Dashboard"],["performance","Số liệu tháng"]]};
+var PARENT={};Object.keys(SUBTABS).forEach(function(k){SUBTABS[k].forEach(function(t){PARENT[t[0]]=k})});
+/* nhóm ở thanh bên cho quản lý */
+var NAVG=[["Vận hành",["mine","overview","tasks","shops"]],["Số liệu",["dashboard"]],["Nhân sự",["staff","logs"]],["Công ty",["company","clients","guide"]]];
+function viewLabel(v){return (VIEWS.filter(function(x){return x[0]===v})[0]||VIEWS[0])[1]}
+function subtabs(v){var p=PARENT[v];if(!p||(!S.admin&&SUBTABS[p].some(function(t){return STAFF_VIEWS.indexOf(t[0])<0})))return "";return '<nav class="subtabs" aria-label="Mục">'+SUBTABS[p].map(function(t){return '<a href="#'+t[0]+'" data-view="'+t[0]+'"'+(t[0]===v?' class="on" aria-current="page"':"")+'>'+esc(t[1])+'</a>'}).join("")+'</nav>'}
+var VIEWS=[["mine","Việc của tôi"],["logs","Nhật ký"],["reports","Báo cáo"],["guide","Cẩm nang"],["overview","Tổng quan"],["dashboard","Dashboard"],["shops","Shop"],["staff","Nhân viên"],["schedule","Lịch ca"],["tasks","Công việc"],["performance","Hiệu suất"],["company","Hồ sơ công ty"],["clients","Điều khoản phí"]];
 var PF={shopee:"Shopee",lazada:"Lazada",tiktok:"TikTok Shop",amazon:"Amazon",shopify:"Shopify",ebay:"eBay",other:"Sàn khác"};
 var MK={VN:"Việt Nam",US:"Mỹ"};
 var SHOP_ST={setup:["Đang thiết lập","info"],active:["Đang vận hành","ok"],paused:["Tạm dừng","warn"],stopped:["Đã dừng","mute"]};
@@ -511,7 +518,10 @@ function buildAlerts(){
 function renderSide(){
   var cnt={mine:myTasks().filter(function(x){return x.status!=="done"}).length,shops:S.shops.filter(function(s){return s.status!=="stopped"}).length,staff:activeStaff().length,tasks:S.tasks.filter(function(t){return t.status!=="done"}).length,clients:S.clients.filter(function(c){return c.status!=="ended"}).length};
   var ICON={company:"file",logs:"book",mine:"check",reports:"file",guide:"book",overview:"grid",dashboard:"chart",shops:"store",staff:"users",schedule:"cal",tasks:"board",performance:"trend",clients:"brief"};
-    var groups=[{key:"timus",label:"TIMUS Vận hành",items:VIEWS.filter(function(v){return S.admin||STAFF_VIEWS.indexOf(v[0])>=0}).map(function(v){return {label:v[1],href:"#"+v[0],icon:ICON[v[0]],current:S.view===v[0],attrs:'data-view="'+v[0]+'"',badge:cnt[v[0]]||""}})}];
+    var item=function(v){return {label:v[1],href:"#"+v[0],icon:ICON[v[0]],current:S.view===v[0]||PARENT[S.view]===v[0],attrs:'data-view="'+v[0]+'"',badge:cnt[v[0]]||""}};
+    var groups;
+    if(S.admin)groups=NAVG.map(function(g){return {key:"timus_"+g[0],label:g[0],items:g[1].filter(function(k){return !(k==="mine"&&!me())}).map(function(k){return item(VIEWS.filter(function(v){return v[0]===k})[0])})}});
+    else groups=[{key:"timus",label:"TIMUS Vận hành",items:VIEWS.filter(function(v){return STAFF_VIEWS.indexOf(v[0])>=0}).map(item)}];
   [["VN","Shop Việt Nam"],["US","Shop Mỹ"]].forEach(function(g){
     var l=S.shops.filter(function(s){return s.status!=="stopped"&&(s.market==="US"?"US":"VN")===g[0]}).sort(function(a,b){return (a.name||"").localeCompare(b.name||"","vi")});
     if(l.length&&S.admin)groups.push({key:"shop"+g[0],label:g[1],items:l.map(function(s){return {label:s.name,title:s.name+" · "+(PF[s.platform]||""),dim:s.status==="paused",dot:"var(--faint)",attrs:'data-act="edit-shop" data-id="'+s.id+'"'}})});
@@ -521,7 +531,7 @@ function renderSide(){
   if(S.myId)acts.push({icon:"out",label:"Đăng xuất",attrs:'data-act="signout"'});
   HT.render({base:"../",active:"timus",groups:groups,owner:!!S.owner,admin:!!S.admin,user:{name:m?m.name:"",email:S.myId||"",actions:acts},foot:[{icon:"help",label:"Hướng dẫn",attrs:'data-act="tour"'}],top:wkChip(todayVN())});
   var pc=$("#pcount");if(pc)pc.textContent=cnt[S.view]||"";
-  $("#ptitle").textContent=(VIEWS.filter(function(v){return v[0]===S.view})[0]||VIEWS[0])[1];
+  $("#ptitle").textContent=viewLabel(PARENT[S.view]||S.view);
 }
 function renderClocks(){
   var f=function(tz){return new Intl.DateTimeFormat("vi-VN",{timeZone:tz,hour:"2-digit",minute:"2-digit",hourCycle:"h23",weekday:"short",day:"2-digit",month:"2-digit"}).format(new Date())};
@@ -1427,7 +1437,7 @@ function render(force){
   if(!S.admin&&S.view==="clients")S.view="mine";
   renderSide();
   var allLoaded=["shops","staff","tasks","clients"].every(function(k){return S.loaded[k]});
-  $("#app").innerHTML=db&&!allLoaded?'<div class="empty">Đang tải dữ liệu...</div>':R[S.view]();
+  $("#app").innerHTML=db&&!allLoaded?'<div class="empty">Đang tải dữ liệu...</div>':subtabs(S.view)+R[S.view]();
   if(fid){var el=document.getElementById(fid);if(el){el.focus();try{if(ss!=null)el.setSelectionRange(ss,se)}catch(_){}}}
   if(drawer&&drawer.live)drawer.live();
   renderBulk();

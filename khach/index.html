@@ -126,7 +126,7 @@ label.f.w{grid-column:1/-1}
 .login-card h1{font-size:26px}.login-card p{margin:0;color:var(--muted);font-size:14px}.login-card .btn{height:38px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=8">
+<link rel="stylesheet" href="../theme.css?v=9">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -182,7 +182,9 @@ function render(){
   var val=fid&&a.value,draft=$("#up-new")?$("#up-new").value:"",rqDraft=$("#rq-title")?$("#rq-title").value:"";
   var prev=S.drawnTab;
   $("#tabs").hidden=false;$("#pcount").textContent=S.clients.length;
-  $("#tabs").innerHTML='<button role="tab" data-tab="all" aria-selected="'+(S.tab==="all")+'">Tất cả</button>'+S.clients.map(function(c){var n=openOf(c.id).length;return '<button role="tab" data-tab="'+c.id+'" aria-selected="'+(S.tab===c.id)+'">'+esc(c.name)+(n?'<small>'+n+'</small>':"")+'</button>'}).join("")+'<button data-new="client">+ Khách hàng</button>';
+  /* từ 6 khách trở lên, dãy tab tràn màn hình nên chuyển sang ô chọn */
+  if(S.clients.length>5)$("#tabs").innerHTML='<button role="tab" data-tab="all" aria-selected="'+(S.tab==="all")+'">Tất cả</button><select id="tab-pick" aria-label="Chọn khách hàng" style="margin:4px 8px 6px;min-height:28px;border:2px solid var(--line2);border-radius:3px;background:#fff;font-size:14px;padding:0 6px"><option value="">Chọn khách hàng</option>'+S.clients.map(function(c){var n=openOf(c.id).length;return '<option value="'+c.id+'"'+(S.tab===c.id?" selected":"")+'>'+esc(c.name)+(n?" ("+n+" yêu cầu)":"")+'</option>'}).join("")+'</select><button data-new="client">+ Khách hàng</button>';
+  else $("#tabs").innerHTML='<button role="tab" data-tab="all" aria-selected="'+(S.tab==="all")+'">Tất cả</button>'+S.clients.map(function(c){var n=openOf(c.id).length;return '<button role="tab" data-tab="'+c.id+'" aria-selected="'+(S.tab===c.id)+'">'+esc(c.name)+(n?'<small>'+n+'</small>':"")+'</button>'}).join("")+'<button data-new="client">+ Khách hàng</button>';
   $("#app").innerHTML=S.tab==="all"?vAll():vClient(byId(S.clients,S.tab));
   S.drawnTab=S.tab;renderBulk();
   if(prev===S.tab){if(draft&&$("#up-new"))$("#up-new").value=draft;if(rqDraft&&$("#rq-title"))$("#rq-title").value=rqDraft;if(fid&&document.getElementById(fid)){var el=document.getElementById(fid);if(val!=null&&val!==false&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA"))el.value=val;el.focus()}}
@@ -304,7 +306,8 @@ async function delItem(){
 
 /* ---------- sự kiện ---------- */
 function bind(){
-  document.addEventListener("click",async function(e){
+  document.addEventListener("change",function(e){if(e.target.id==="tab-pick"&&e.target.value){S.tab=e.target.value;try{history.replaceState(null,"","#"+S.tab)}catch(_){}render();window.scrollTo(0,0)}});
+document.addEventListener("click",async function(e){
     var t=e.target;
     if(t.closest("[data-close]")){closeDrawer();return}
     if(t.id==="d-del"){delItem();return}

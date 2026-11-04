@@ -89,6 +89,20 @@
         + (name ? '<div class="tb-u" title="' + esc(u.email || name) + '"><div class="av" aria-hidden="true">' + esc(name.trim().split(/\s+/).pop().charAt(0).toUpperCase()) + "</div><b>" + esc(name) + "</b></div>" : "");
     }
     if (!document.querySelector(".nsb-scrim")) { var s = document.createElement("div"); s.className = "nsb-scrim"; document.body.appendChild(s); }
+    crumbs(o, base);
+  }
+  /* đường dẫn nhỏ phía trên tiêu đề trang: nhóm / trang / mục đang xem */
+  var CRUMB = { viec: ["Chung", "To do"], kiemsoat: ["Chung", "Kiểm soát"], vanphong: ["Chung", "Văn phòng Agent"], timus: ["Business", "TIMUS Vận hành"], khach: ["Business", "TIMUS Customers"], content: ["Business", "Content"] };
+  function crumbs(o, base) {
+    var hd = document.querySelector("header.bar"); if (!hd) return;
+    var c = CRUMB[o.active]; var el = hd.querySelector(".crumbs");
+    if (!c) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement("div"); el.className = "crumbs"; hd.insertBefore(el, hd.firstChild); }
+    var cur = "", groups = o.groups || [];
+    groups.forEach(function (g) { (g.items || []).forEach(function (it) { if (it.current) cur = it.label; }); });
+    var parts = ['<a href="' + esc(base || "./") + '">' + esc(c[0]) + "</a>", cur ? '<a href="' + esc(base + ({ timus: "timus/", khach: "khach/", content: "content/", viec: "viec/", kiemsoat: "kiemsoat/", vanphong: "van-phong/" })[o.active]) + '">' + esc(c[1]) + "</a>" : "<span>" + esc(c[1]) + "</span>"];
+    if (cur) parts.push("<span>" + esc(cur) + "</span>");
+    el.innerHTML = parts.join("<i>/</i>");
   }
   /* tìm trang: lấy danh sách từ chính các mục ở thanh bên */
   function results() {
