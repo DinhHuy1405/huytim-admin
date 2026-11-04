@@ -48,6 +48,7 @@
 .tag:hover .role,.tag.sel .role{display:inline}
 .tag.sel{border-color:#37352F}
 .tag.dim{opacity:.75}
+.tag .lead{font-size:10px;font-weight:600;color:#fff;background:#37352F;border-radius:4px;padding:1px 5px;margin-left:2px}
 .roomtag{font-size:13px;font-weight:600;color:#fff;border-radius:7px;padding:4px 10px;box-shadow:0 2px 8px rgba(0,0,0,.12);pointer-events:auto;cursor:pointer;font-family:Inter,sans-serif}
 .think{display:flex;gap:3px;margin-left:2px}
 .think i{width:4px;height:4px;border-radius:50%;background:var(--run);animation:th 1.2s infinite}
@@ -61,7 +62,7 @@
 .login-card h1{margin:0;font-size:20px}.login-card p{margin:0;color:#787774;font-size:13.5px}
 .login-card .ws{display:flex;align-items:center;gap:8px;font-weight:600}.login-card .ws i{width:22px;height:22px;border-radius:5px;background:#37352F;color:#fff;font-style:normal;font-size:12px;display:grid;place-items:center}
 </style>
-<link rel="stylesheet" href="../theme.css?v=9">
+<link rel="stylesheet" href="../theme.css?v=10">
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
 </script>
@@ -90,7 +91,7 @@
 
 <script src="../timus/config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="../shell.js?v=7"></script>
+<script src="../shell.js?v=8"></script>
 <script>
 /* đăng nhập và kiểm tra quyền giống trang To do; xong thì giao dữ liệu cho phần 3D */
 (function(){
@@ -308,6 +309,8 @@ function build(depts, snapshotAt){
       g.add(mesh(rbox(1.1,.04,.36,.02), M(0xe9e8e4,{roughness:.4}), 0,1.63,-.2)); g.add(mesh(rbox(.18,.05,.28,.06), M(0xe9e8e4,{roughness:.4}), .85,1.63,-.2));
       if (seed%3===0) g.add(mesh(new THREE.CylinderGeometry(.11,.09,.26,14), M(seed%2?0xffffff:d.color), -1.25,1.74,-.6));
       if (seed%4===1){ const b = mesh(rbox(.5,.08,.65,.02), M(0xf2efe6), 1.2,1.65,-.75); b.rotation.y = .2; g.add(b); }
+      if (a.lead){ const plate = mesh(rbox(.9,.22,.06,.02), M(d.color,{roughness:.4}), -1.0,1.75,-.2); plate.rotation.x = -.35; g.add(plate);
+        const rug2 = new THREE.Mesh(new THREE.RingGeometry(1.95,2.05,64), new THREE.MeshBasicMaterial({color:d.color, transparent:true, opacity:.55})); rug2.rotation.x = -Math.PI/2; rug2.position.set(0,.05,.1); g.add(rug2); }
       const ch = chair(); ch.position.set(0,0,.75); g.add(ch);
       const p = person(tint.clone().lerp(new THREE.Color(0xffffff), st==="idle" ? .55 : .15), seed); p.g.position.set(0,0,.75); g.add(p.g);
       if (st === "idle"){ p.torso.rotation.x = -.18; p.head.rotation.x = -.25; ch.position.z = 1.1; p.g.position.z = 1.1; p.arms.forEach(arm => { arm.rotation.x = -.15; arm.userData.fore.rotation.x = 1.2; }); }
@@ -316,7 +319,7 @@ function build(depts, snapshotAt){
       if (st === "run"){ ring = new THREE.Mesh(new THREE.RingGeometry(1.7,1.85,64), new THREE.MeshBasicMaterial({color:COL.run, transparent:true, opacity:.6})); ring.rotation.x = -Math.PI/2; ring.position.set(0,.06,.1); g.add(ring); }
       if (st !== "idle"){ lamp = new THREE.PointLight(new THREE.Color(st==="run"?0x9fe1cb:0xffe2b0), 0, 6, 2); lamp.position.set(0,2.6,-.4); g.add(lamp); }
       const el = document.createElement("div"); el.className = "tag" + (st==="idle" ? " dim" : "") + (selected === a.id ? " sel" : "");
-      el.innerHTML = `<span class="dot" style="background:${COL[st]}"></span>${esc(a.name)}${st==="run" ? '<span class="think"><i></i><i></i><i></i></span>' : ""}<span class="role">· ${esc(a.role)}</span>`;
+      el.innerHTML = `<span class="dot" style="background:${COL[st]}"></span>${esc(a.name)}${st==="run" ? '<span class="think"><i></i><i></i><i></i></span>' : ""}${a.lead ? '<span class="lead">Trưởng phòng</span>' : ""}<span class="role">· ${esc(a.role)}</span>`;
       el.onclick = e => { e.stopPropagation(); select(a.id); };
       const lab = new CSS2DObject(el); lab.position.set(0,3.55,.4); g.add(lab);
       workers[a.id] = {a, dept:d, st, g, p, ring, lamp, sc, scrMat, el};
@@ -354,6 +357,7 @@ function showDetail(id){
   const w = workers[id], a = w.a, parent = a.parent && workers[a.parent], kids = ALL.filter(x => x.parent === id);
   detailBody.innerHTML = `<div class="who">${esc(a.name)}</div><span class="vpill"><span class="dot" style="background:${COL[w.st]}"></span>${TXT[w.st]}</span>
     <dl><dt>Phòng ban</dt><dd><span class="dot" style="background:${hex(w.dept.color)};margin-right:6px"></span>${esc(w.dept.name)}</dd>
+    ${a.lead ? `<dt>Vai trò</dt><dd>Trưởng phòng</dd>` : ""}
     <dt>Công việc</dt><dd>${esc(a.role)}</dd>
     <dt>Lần cuối</dt><dd>${esc((a.last||"").replace("T"," "))} <span style="color:#76746d">(${ago(a.last)})</span></dd>
     ${parent ? `<dt>Được giao bởi</dt><dd>${esc(parent.a.name)}</dd>` : ""}

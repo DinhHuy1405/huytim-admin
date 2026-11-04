@@ -38,6 +38,13 @@ h1{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin:0
 .qa{display:grid;grid-template-columns:minmax(0,1fr) 170px 150px 110px 150px auto;gap:6px;margin:0 0 14px;padding:8px;border:1px solid var(--line);border-radius:6px}
 .qa input,.qa select,.filters input{border:1px solid var(--line2);border-radius:4px;padding:6px 9px;min-width:0;background:#fff;font-size:14.5px}
 @media (max-width:900px){.qa{grid-template-columns:1fr 1fr}.qa #qa-title{grid-column:1/-1}}
+.qa.qa1{grid-template-columns:minmax(0,1fr) auto;align-items:start}
+.qa.qa1 #qa-title{grid-column:auto;min-height:36px}
+.qa-more{grid-column:1/-1}.qa-more summary{cursor:pointer;font-size:13px;color:var(--soft);list-style:none;padding:4px 2px}.qa-more summary::-webkit-details-marker{display:none}
+.qa-more summary::before{content:"";display:inline-block;width:0;height:0;border-left:6px solid var(--soft);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-right:8px}
+.qa-more[open] summary::before{transform:rotate(90deg)}
+.qa-f{display:grid;grid-template-columns:170px minmax(0,1fr) 110px 150px;gap:6px;padding-top:6px}
+@media (max-width:900px){.qa-f{grid-template-columns:1fr 1fr}}
 details.inp{margin:0 0 14px;border:1px solid var(--line);border-radius:6px}
 details.inp>summary{cursor:pointer;padding:7px 10px;font-size:14px;color:var(--soft);list-style:none;border-radius:6px}
 details.inp>summary::-webkit-details-marker{display:none}
@@ -94,7 +101,7 @@ label.f.w{grid-column:1/-1}
 .login-card h1{font-size:26px}.login-card p{margin:0;color:var(--muted);font-size:14px}.login-card .btn{height:38px}
 @media (prefers-reduced-motion:reduce){.toast,.col{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=9">
+<link rel="stylesheet" href="../theme.css?v=10">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -104,14 +111,16 @@ label.f.w{grid-column:1/-1}
     <div class="stats" id="stats"></div>
     <div class="utabs" id="filters"></div>
     <div class="tbar" id="tbar"></div>
-    <details class="inp" id="addbox"><summary>Thêm việc mới</summary><div class="inner"><form class="qa" id="qa">
-      <input id="qa-title" placeholder="Thêm việc mới, ví dụ: Chấm bài tuần 2 của học viên" aria-label="Việc mới" autocomplete="off" required>
-      <select id="qa-area" aria-label="Mảng"></select>
-      <input id="qa-project" placeholder="Dự án" aria-label="Dự án" autocomplete="off">
-      <select id="qa-prio" aria-label="Ưu tiên"></select>
-      <input id="qa-due" type="date" aria-label="Hạn">
-      <button class="btn primary" type="submit">Thêm việc</button>
-    </form></div></details>
+    <form class="qa qa1" id="qa">
+      <input id="qa-title" placeholder="Gõ việc rồi bấm Enter, mảng tự đoán theo từ khóa" aria-label="Việc mới" autocomplete="off" required>
+      <button class="btn primary" type="submit">Thêm</button>
+      <details class="qa-more"><summary>Chi tiết</summary><div class="qa-f">
+        <select id="qa-area" aria-label="Mảng"></select>
+        <input id="qa-project" placeholder="Dự án" aria-label="Dự án" autocomplete="off">
+        <select id="qa-prio" aria-label="Ưu tiên"></select>
+        <input id="qa-due" type="date" aria-label="Hạn">
+      </div></details>
+    </form>
     <div id="board"></div>
   </main>
   <div id="msg"></div>
@@ -122,7 +131,7 @@ label.f.w{grid-column:1/-1}
 
 <script src="../timus/config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="../shell.js?v=7"></script>
+<script src="../shell.js?v=8"></script>
 <script>
 (function(){
 "use strict";
@@ -130,7 +139,8 @@ var AREA={content:["Content","pill night"],timus_van_hanh:["Vận hành sàn","p
 var PRIO={cao:["Cao","pill bad",0],thuong:["Thường","pill",1],thap:["Thấp","pill",2]};
 var STATUS=[["todo","Todo"],["doing","Doing"],["done","Done"]];
 var FLAG={cho_duyet:["Chờ duyệt","pill warn"],dang_ket:["Đang kẹt","pill bad"]};
-var DOING_MAX=3,DONE_SHOW=20;
+var DOING_MAX=3,DONE_SHOW=20,DONE_DAYS=7;
+function addD(s,k){var a=s.split("-").map(Number);return new Date(Date.UTC(a[0],a[1]-1,a[2]+k)).toISOString().slice(0,10)}
 var S={rows:[],area:"",q:"",allDone:false,editing:null,delArm:false,view:"board",sel:{},bulkArm:false};
 try{if(localStorage.getItem("ht-todo-view")==="list")S.view="list"}catch(_){}
 var sb=null;
@@ -202,7 +212,7 @@ function render(){
     var extra="";
     if(s[0]==="done"){
       items.sort(function(a,b){return (b.done_at||"")<(a.done_at||"")?-1:1});
-      if(!S.allDone&&items.length>DONE_SHOW){extra='<button class="more" type="button" id="alldone">Hiện thêm '+(items.length-DONE_SHOW)+' việc</button>';items=items.slice(0,DONE_SHOW)}
+      if(!S.allDone){var cut=addD(t,-DONE_DAYS),recent=items.filter(function(x){return (x.done_at||"").slice(0,10)>=cut});if(recent.length<items.length){extra='<button class="more" type="button" id="alldone">Hiện thêm '+(items.length-recent.length)+' việc cũ hơn 7 ngày</button>';items=recent}}
     }else items.sort(sortOpen);
     var count=s[0]==="doing"?'<span class="'+(doing>DOING_MAX?"over3":"")+'">'+items.length+'/'+DOING_MAX+'</span>':'<span>'+items.length+'</span>';
     return '<section class="col" data-s="'+s[0]+'"><h2><b>'+s[1]+'</b>'+count+'</h2>'+(items.length?items.map(function(x){return card(x,t)}).join(""):'<div class="empty">Trống</div>')+extra+'</section>';
@@ -301,7 +311,10 @@ function bind(){
   $("#qa").addEventListener("submit",async function(e){
     e.preventDefault();
     var title=$("#qa-title").value.trim();if(!title)return;
-    var r=await sb.rpc("hub_add_todo",{tieu_de:title,mang:$("#qa-area").value,du_an:$("#qa-project").value.trim()||null,uu_tien:$("#qa-prio").value,han:$("#qa-due").value||null});
+    /* mảng tự đoán theo từ khóa khi chưa mở Chi tiết */
+    var area=$("#qa-area").value,more=document.querySelector(".qa-more");
+    if(!(more&&more.open)){var L=title.toLowerCase(),G=[["content",/video|edit|tiktok|blog|caption|content|quay|kịch bản|format/],["timus_doi_tac",/ami|đối tác|hợp đồng|llc|báo giá|mỹ phẩm|khách/],["academy",/học viên|mentor|academy|bài|lớp|trợ giảng/],["timus_van_hanh",/shop|shopee|lazada|amazon|trang\b|nhân viên|đơn|kho|sản phẩm/]];for(var i=0;i<G.length;i++)if(G[i][1].test(L)){area=G[i][0];break}}
+    var r=await sb.rpc("hub_add_todo",{tieu_de:title,mang:area,du_an:$("#qa-project").value.trim()||null,uu_tien:$("#qa-prio").value,han:$("#qa-due").value||null});
     if(r.error){fail(r.error);return}
     toast(r.data&&r.data.tao_moi===false?"Việc này đã có sẵn trên bảng":"Đã thêm việc");
     $("#qa-title").value="";$("#qa-title").focus();load();

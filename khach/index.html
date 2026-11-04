@@ -126,7 +126,7 @@ label.f.w{grid-column:1/-1}
 .login-card h1{font-size:26px}.login-card p{margin:0;color:var(--muted);font-size:14px}.login-card .btn{height:38px}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
-<link rel="stylesheet" href="../theme.css?v=9">
+<link rel="stylesheet" href="../theme.css?v=10">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -141,7 +141,7 @@ label.f.w{grid-column:1/-1}
 
 <script src="../timus/config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="../shell.js?v=7"></script>
+<script src="../shell.js?v=8"></script>
 <script>
 (function(){
 "use strict";
@@ -194,7 +194,7 @@ function vAll(){
   var late=open.filter(function(r){return r.due_date&&r.due_date<t}).length,wait=open.filter(function(r){return r.status==="cho_khach"}).length;
   var stat=function(v,l,c){return '<div class="stat '+(c||"")+'"><div class="l">'+l.charAt(0).toUpperCase()+l.slice(1)+'</div><div class="v">'+v+'</div></div>'};
   var count=function(k){return S.clients.filter(function(c){return c.stage===k}).length};
-  var h='<div class="stats">'+stat(S.clients.length,"khách hàng")+stat(count("dam_phan")+count("tiep_can"),"đang tiếp cận, đàm phán")+stat(count("thiet_lap")+count("van_hanh"),"đang thiết lập, vận hành")+stat(open.length,"yêu cầu đang mở")+stat(late,"yêu cầu quá hạn",late?"bad":"")+stat(wait,"chờ khách phản hồi",wait?"warn":"")+'</div>';
+  var h='<div class="stats">'+stat(S.clients.length,"khách hàng","","",count("thiet_lap")+count("van_hanh")+" đang làm · "+(count("dam_phan")+count("tiep_can"))+" đang tiếp cận")+stat(open.length,"yêu cầu đang mở")+stat(late,"yêu cầu quá hạn",late?"bad":"")+stat(wait,"chờ khách phản hồi",wait?"warn":"")+'</div>';
   if(!S.clients.length)return h+'<div class="empty">Chưa có khách hàng. Bấm + Khách hàng để thêm khách đầu tiên; mỗi khách sẽ có một tab riêng.</div>';
   return h+'<h2>Tất cả khách hàng<span>bấm vào một dòng để mở tab</span></h2><div class="tbl"><table><thead><tr><th>Khách hàng</th><th>Giai đoạn</th><th>Yêu cầu</th><th>Hạn gần nhất</th><th>Bước tiếp theo</th></tr></thead><tbody>'
    +S.clients.map(function(c){

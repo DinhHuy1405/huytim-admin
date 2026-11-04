@@ -8,7 +8,7 @@ var IST=[["moi","Mới"],["dang_thu","Đang thử"],["da_ap_dung","Đã áp dụ
 var CST=[["dam_phan","Đang đàm phán"],["dang_lam","Đang làm"],["cho_thanh_toan","Chờ thanh toán"],["xong","Xong"],["dung","Dừng"]];
 var VIEWS=[["overview","Tổng quan","chart"],["videos","Video","board"],["formats","Format","grid"],["commands","Lệnh","file"],["insights","Highlight","trend"],["collabs","Collaboration","box"],["update","Cập nhật số liệu","cal"]];
 var S={view:"overview",videos:[],formats:[],commands:[],days:[],snaps:[],ins:[],media:[],collabs:[],cdocs:[],urls:{},email:"",
-  f:{st:"all",q:"",fmt:"",from:"",to:"",metric:"views",chart:"bar",fid:"",cmd:"",edit:false,kind:"all"},done:false};
+  f:{st:"all",q:"",fmt:"",from:"",to:"",metric:"views",chart:"bar",fid:"",cmd:"",edit:false,kind:"all",sort:"posted_on",dir:-1},done:false};
 var sb=null;
 
 var $=function(s,r){return (r||document).querySelector(s)};
@@ -68,7 +68,7 @@ function vOverview(){
   var dl=function(c,p){if(!prev.length||!p)return "";var v=(c-p)/p*100;return '<b class="'+(v<0?"dn":"")+'">'+(v>0?"+":"")+vi(v,1)+'%</b> so với kỳ trước'};
   var V=sum(rows,"views"),P=sum(prev,"views"),N=sum(rows,"net_followers"),PN=sum(prev,"net_followers"),C=sum(rows,"comments"),PC=sum(prev,"comments");
   var r1=V?N/V*1000:0,r2=V?C/V*1000:0,p1=P?PN/P*1000:0,p2=P?PC/P*1000:0,pv=V?sum(rows,"profile_views")/V*100:0;
-  var h='<div class="dtop"><div class="filters"><button type="button" class="rbtn" id="rg" data-a="range">'+HT.ic("cal")+dm(r.from)+' đến '+dm(r.to)+'</button><span class="dlab">'+(prev.length?"so với kỳ liền trước":"")+'</span></div><span class="dlab">Số liệu đến '+dm(r.max)+'</span></div>';
+  var h='<div class="dtop"><div class="filters"><button type="button" class="rbtn" id="rg" data-a="range">'+HT.ic("cal")+dm(r.from)+' đến '+dm(r.to)+'</button><span class="dlab">'+(prev.length?"so với kỳ liền trước":"")+'</span></div><button type="button" class="btn sm" data-a="go" data-v="update" style="margin-left:8px">Tải file TikTok</button><span class="dlab">Số liệu đến '+dm(r.max)+'</span></div>';
   h+='<div class="stats">'+stat(vi(last.followers),"Follower","",sp("followers"))+stat(short(V),"Lượt xem","",sp("views"),dl(V,P))+stat((N>=0?"+":"")+vi(N),"Follower tăng","",sp("net_followers"),dl(N,PN))+stat(vi(r1,1),"Follower/1K view",r1<1&&V>1000?"bad":"","",dl(r1,p1))+stat(vi(r2,1),"Comment/1K view","","",dl(r2,p2))+stat(vi(pv,1)+"%","Xem trang cá nhân")+'</div>';
   var M=[["views","Lượt xem"],["net_followers","Follower tăng"],["comments","Comment"],["likes","Like"]],k=S.f.metric;
   h+='<section class="dsec"><div class="chead"><h2 class="sec">'+name(M,k)+' theo ngày</h2><div class="filters"><div class="seg">'+M.map(function(m){return '<button type="button" class="'+(k===m[0]?"on":"")+'" data-a="metric" data-v="'+m[0]+'">'+m[1]+'</button>'}).join("")+'</div><div class="seg" aria-label="Kiểu biểu đồ"><button type="button" class="'+(S.f.chart==="bar"?"on":"")+'" data-a="chart" data-v="bar" aria-label="Biểu đồ cột">'+HT.ic("bars")+'</button><button type="button" class="'+(S.f.chart==="line"?"on":"")+'" data-a="chart" data-v="line" aria-label="Biểu đồ đường">'+HT.ic("line")+'</button></div></div></div>'+chart(rows,k,name(M,k),S.f.chart)+'<details class="dn"><summary>Xem bảng số theo ngày</summary><div class="tbl"><table><thead><tr><th>Ngày</th><th class="num">View</th><th class="num">Follower tăng</th><th class="num">Like</th><th class="num">Comment</th><th class="num">Share</th></tr></thead><tbody>'+rows.slice().reverse().map(function(x){return '<tr><td>'+dm(x.day)+'</td><td class="num">'+vi(x.views)+'</td><td class="num">'+vi(x.net_followers)+'</td><td class="num">'+vi(x.likes)+'</td><td class="num">'+vi(x.comments)+'</td><td class="num">'+vi(x.shares)+'</td></tr>'}).join("")+'</tbody></table></div></details></section>';
@@ -107,12 +107,14 @@ function dShow(h){
 
 /* ---------- video ---------- */
 function videoTable(l,mini){
-  return '<div class="tbl"><table><thead><tr><th style="width:52px"></th><th>Video</th><th>Format</th><th>Trạng thái</th><th>Đăng</th><th class="num">View</th><th class="num">ER</th><th class="num">Comment/1K</th></tr></thead><tbody>'
+  var th=function(k,l,num){if(mini)return '<th'+(num?' class="num"':"")+'>'+l+'</th>';var on=S.f.sort===k;return '<th'+(num?' class="num"':"")+'><button type="button" class="sortb'+(on?" on":"")+'" data-a="sort" data-v="'+k+'">'+l+(on?(S.f.dir<0?" ↓":" ↑"):"")+'</button></th>'};
+  return '<div class="tbl"><table><thead><tr><th style="width:52px"></th>'+th("title","Video")+'<th>Format</th><th>Trạng thái</th>'+th("posted_on","Đăng")+th("views","View",1)+th("er","ER",1)+th("c1k","Comment/1K",1)+'</tr></thead><tbody>'
    +l.map(function(v){var f=byId(S.formats,v.format_id),e=er(v);return '<tr class="click" tabindex="0" data-a="video" data-v="'+esc(v.id)+'"><td style="min-width:0">'+img(v.cover_path,"ct-v",v.title)+'</td><td><div class="t1">'+esc(v.title||v.name)+'</div><div class="t2">'+esc(v.brand)+'</div></td><td class="t2">'+esc(f?f.name:"")+'</td><td><span class="pill '+(v.status==="da_dang"?"ok":v.status==="cho_dang"?"warn":"")+'">'+name(STATUS,v.status)+'</span></td><td class="t2">'+dm(v.posted_on)+'</td><td class="num">'+(v.views?short(v.views):"")+'</td><td class="num">'+(e==null?"":vi(e,e<1?2:1)+"%")+'</td><td class="num">'+(v.views?vi((v.comments||0)/v.views*1000,1):"")+'</td></tr>'}).join("")+'</tbody></table></div>';
 }
 function vVideos(){
   var f=S.f,q=f.q.toLowerCase(),l=S.videos.filter(function(v){return (f.st==="all"||v.status===f.st)&&(!f.fmt||v.format_id===f.fmt)&&(!q||(v.title+" "+v.name+" "+v.brand+" "+v.notes).toLowerCase().indexOf(q)>=0)});
-  l.sort(function(a,b){return (b.posted_on||"")<(a.posted_on||"")?-1:(b.posted_on||"")>(a.posted_on||"")?1:(b.stt||0)-(a.stt||0)});
+  var k=f.sort,d=f.dir,val=function(v){return k==="er"?(er(v)==null?-1:er(v)):k==="c1k"?(v.views?(v.comments||0)/v.views*1000:-1):k==="views"?(v.views||0):k==="title"?(v.title||v.name||"").toLowerCase():(v.posted_on||"")};
+  l.sort(function(a,b){var x=val(a),y=val(b);if(x===y)return (b.stt||0)-(a.stt||0);return (x<y?-1:1)*d});
   var cnt=function(k){return S.videos.filter(function(v){return v.status===k}).length};
   var h='<div class="utabs"><button type="button" class="'+(f.st==="all"?"on":"")+'" data-a="st" data-v="all">Tất cả</button>'+STATUS.map(function(s){return '<button type="button" class="'+(f.st===s[0]?"on":"")+'" data-a="st" data-v="'+s[0]+'">'+s[1]+' '+cnt(s[0])+'</button>'}).join("")+'</div>';
   h+='<div class="toolbar"><div class="filters"><input type="search" id="vq" placeholder="Tìm video" aria-label="Tìm video" value="'+esc(f.q)+'"><select id="vf" aria-label="Format">'+opt("","Mọi format",f.fmt)+S.formats.map(function(x){return opt(x.id,x.name,f.fmt)}).join("")+'</select></div><button class="btn primary" data-a="video-new">Thêm video</button></div>';
@@ -303,6 +305,7 @@ function bind(){
     if(a==="go")go(v);
     else if(a==="metric"){f.metric=v;render()}
     else if(a==="chart"){f.chart=v;render()}
+    else if(a==="sort"){if(S.f.sort===v)S.f.dir=-S.f.dir;else{S.f.sort=v;S.f.dir=v==="title"?1:-1}render();return}
     else if(a==="st"){f.st=v;render()}
     else if(a==="kind"){f.kind=v;render()}
     else if(a==="video")videoForm(byId(S.videos,v));

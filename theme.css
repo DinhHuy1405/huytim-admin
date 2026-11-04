@@ -162,6 +162,7 @@ tbody tr:hover,tbody tr.click:hover{background:var(--n10)}
 tbody tr.sel{background:var(--b50)}
 tfoot td{font-weight:500;background:var(--n10);border-bottom:0}
 th.chk,td.chk{width:42px;padding-right:0}
+th .sortb{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;white-space:nowrap}th .sortb:hover,th .sortb.on{color:var(--b400)}
 .t1{font-weight:500}.t2{font-size:12px;line-height:16px;color:var(--n80)}
 .tbl td:first-child{min-width:150px}.tbl td.chk:first-child{min-width:0}
 input.cell{min-height:30px;border:2px solid var(--n30);border-radius:3px;background:#fff;min-width:84px}
