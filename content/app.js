@@ -370,6 +370,6 @@ function loginScreen(){
   S.email=String(session.user.email||"").toLowerCase();
   var r=await sb.from("core_roles").select("area,role").eq("email",S.email);
   if(r.error||!(r.data||[]).some(function(x){return (x.area==="all"||x.area==="content")&&(x.role==="owner"||x.role==="admin")})){render();$("#msg").innerHTML='<p class="empty">Tài khoản này không có quyền xem trang Content.</p>';return}
-  bind();await load();
+  bind();HT.flags(sb,"../");await load();
 })();
 })();

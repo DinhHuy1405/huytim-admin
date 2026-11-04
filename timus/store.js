@@ -344,6 +344,7 @@
   }
   window.TIMUS_AUTH = {
     email: function () { return me.email; },
+    client: function () { return sb; },
     signOut: async function () { if (sb) await sb.auth.signOut(); location.reload(); }
   };
   window.claude = {

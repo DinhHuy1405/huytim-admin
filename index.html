@@ -37,7 +37,7 @@ div.biz{color:var(--soft)}
 .note{color:var(--soft);font-size:13px;margin-top:24px}
 .today{margin-bottom:20px}.today .cols2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:860px){.today .cols2{grid-template-columns:1fr}}.today h2.sec a{color:var(--b400);text-decoration:none;font-size:12px}
 </style>
-<link rel="stylesheet" href="theme.css?v=10">
+<link rel="stylesheet" href="theme.css?v=11">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
@@ -60,7 +60,7 @@ div.biz{color:var(--soft)}
 </div>
 <script src="timus/config.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
-<script src="shell.js?v=8"></script>
+<script src="shell.js?v=9"></script>
 <script>
 HT.render({base:"",active:"home"});
 /* Hôm nay: việc gần hạn, cờ rủi ro, nhắc nhở; chỉ hiện khi đã đăng nhập ở một trang khác */
@@ -71,6 +71,7 @@ HT.render({base:"",active:"home"});
   var cur=await sb.auth.getSession(),session=cur.data&&cur.data.session;if(!session)return;
   var email=String(session.user.email||"").toLowerCase();
   HT.render({base:"",active:"home",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
+  HT.flags(sb,"");
   var roles=await sb.from("core_roles").select("area,role").eq("email",email);
   var owner=!roles.error&&(roles.data||[]).some(function(x){return x.area==="all"&&x.role==="owner"});if(!owner)return;
   var t=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh"}).format(new Date()),ym=t.slice(0,7);
