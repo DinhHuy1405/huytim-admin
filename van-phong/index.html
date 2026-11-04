@@ -13,7 +13,7 @@
 :root{--run:#1d9e75;--today:#c98a1b;--idle:#a9a79f}
 .stage{position:relative;height:calc(100vh - 96px);min-height:520px;border:1px solid var(--line,#E9E9E7);border-radius:8px;overflow:hidden;background:#ecebe6;margin-top:4px}
 .stage canvas{display:block}
-.vp{position:absolute;z-index:5;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border:1px solid #e4e2db;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.05)}
+.vp{position:absolute;z-index:10;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border:1px solid #e4e2db;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.05)}
 #vside{top:12px;left:12px;width:264px;padding:14px;max-height:calc(100% - 24px);overflow:auto}
 #vside .stamp{font-size:12px;color:#76746d;display:flex;align-items:center;gap:6px}
 .live{width:6px;height:6px;border-radius:50%;background:var(--run);animation:pulse 2s infinite;flex:none}
@@ -158,7 +158,7 @@ renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadow
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.outputColorSpace = THREE.SRGBColorSpace;
 stage.prepend(renderer.domElement);
 const labels = new CSS2DRenderer();
-Object.assign(labels.domElement.style, {position:"absolute", top:"0", left:"0", pointerEvents:"none"});
+Object.assign(labels.domElement.style, {position:"absolute", top:"0", left:"0", pointerEvents:"none", zIndex:"1"});
 stage.insertBefore(labels.domElement, renderer.domElement.nextSibling);
 
 const scene = new THREE.Scene();
@@ -319,7 +319,7 @@ function build(depts, snapshotAt){
       if (st === "run"){ ring = new THREE.Mesh(new THREE.RingGeometry(1.7,1.85,64), new THREE.MeshBasicMaterial({color:COL.run, transparent:true, opacity:.6})); ring.rotation.x = -Math.PI/2; ring.position.set(0,.06,.1); g.add(ring); }
       if (st !== "idle"){ lamp = new THREE.PointLight(new THREE.Color(st==="run"?0x9fe1cb:0xffe2b0), 0, 6, 2); lamp.position.set(0,2.6,-.4); g.add(lamp); }
       const el = document.createElement("div"); el.className = "tag" + (st==="idle" ? " dim" : "") + (selected === a.id ? " sel" : "");
-      el.innerHTML = `<span class="dot" style="background:${COL[st]}"></span>${esc(a.name)}${st==="run" ? '<span class="think"><i></i><i></i><i></i></span>' : ""}${a.lead ? '<span class="lead">Trưởng phòng</span>' : ""}<span class="role">· ${esc(a.role)}</span>`;
+      el.innerHTML = `<span class="dot" style="background:${COL[st]}"></span>${esc(a.name)}${st==="run" ? '<span class="think"><i></i><i></i><i></i></span>' : ""}${a.lead && !/trưởng phòng/i.test(a.name) ? '<span class="lead">Trưởng phòng</span>' : ""}<span class="role">· ${esc(a.role)}</span>`;
       el.onclick = e => { e.stopPropagation(); select(a.id); };
       const lab = new CSS2DObject(el); lab.position.set(0,3.55,.4); g.add(lab);
       workers[a.id] = {a, dept:d, st, g, p, ring, lamp, sc, scrMat, el};
