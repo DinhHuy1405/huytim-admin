@@ -35,18 +35,15 @@ a.biz:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .tg.ok{background:var(--ok-bg);color:var(--ok)}.tg.info{background:var(--info-bg);color:var(--info)}.tg.mute{background:var(--mute-bg);color:var(--mute)}
 div.biz{color:var(--soft)}
 .note{color:var(--soft);font-size:13px;margin-top:24px}
+.today{margin-bottom:20px}.today .cols2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media (max-width:860px){.today .cols2{grid-template-columns:1fr}}.today h2.sec a{color:var(--b400);text-decoration:none;font-size:12px}
 </style>
 <link rel="stylesheet" href="theme.css?v=10">
 </head>
 <body>
 <aside id="side" class="nsb" aria-label="Điều hướng"></aside>
 <div class="wrap">
-  <header class="bar"><h1>Trang chủ <span class="cnt">6</span></h1></header>
-  <div class="stats">
-    <div class="stat"><div class="l">Đang chạy</div><div class="v">4</div></div>
-    <div class="stat"><div class="l">Trang riêng</div><div class="v">1</div></div>
-    <div class="stat"><div class="l">Sắp gắn</div><div class="v">1</div></div>
-  </div>
+  <header class="bar"><h1>Trang chủ</h1></header>
+  <div id="today" class="today" hidden></div>
   <div class="tbl"><table>
     <thead><tr><th>Trang</th><th>Việc làm được</th><th>Trạng thái</th><th>Ai xem được</th></tr></thead>
     <tbody>
@@ -61,9 +58,37 @@ div.biz{color:var(--soft)}
   </table></div>
   <p class="note">Dữ liệu lưu trên Supabase của Huy Tim. Mỗi người chỉ thấy business mình được cấp quyền.</p>
 </div>
+<script src="timus/config.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
 <script src="shell.js?v=8"></script>
 <script>
 HT.render({base:"",active:"home"});
+/* Hôm nay: việc gần hạn, cờ rủi ro, nhắc nhở; chỉ hiện khi đã đăng nhập ở một trang khác */
+(async function(){
+  var $=function(q){return document.querySelector(q)},esc=function(x){return String(x==null?"":x).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
+  var cfg=window.TIMUS_CONFIG||{};if(!window.supabase||!cfg.supabaseUrl)return;
+  var sb=window.supabase.createClient(cfg.supabaseUrl,cfg.anonKey,{auth:{persistSession:true,detectSessionInUrl:true}});
+  var cur=await sb.auth.getSession(),session=cur.data&&cur.data.session;if(!session)return;
+  var email=String(session.user.email||"").toLowerCase();
+  HT.render({base:"",active:"home",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
+  var roles=await sb.from("core_roles").select("area,role").eq("email",email);
+  var owner=!roles.error&&(roles.data||[]).some(function(x){return x.area==="all"&&x.role==="owner"});if(!owner)return;
+  var t=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh"}).format(new Date()),ym=t.slice(0,7);
+  var wk=new Date(Date.UTC(+t.slice(0,4),+t.slice(5,7)-1,+t.slice(8,10)+7)).toISOString().slice(0,10);
+  var r=await Promise.all([sb.from("hub_todos").select("id,title,status,due_date,priority,area").neq("status","done"),sb.from("hub_risk_flags").select("code,evidence,raised_on").is("cleared_on",null),sb.from("hub_decisions").select("id,title,review_on").is("outcome",null).lte("review_on",t),sb.from("hub_monthly_metrics").select("month").eq("month",ym+"-01")]);
+  var todos=r[0].data||[],flags=r[1].data||[],decs=r[2].data||[],hasM=(r[3].data||[]).length>0;
+  var dm=function(d){return d?d.slice(8,10)+"/"+d.slice(5,7):""};
+  var due=todos.filter(function(x){return x.due_date&&x.due_date<=wk}).sort(function(a,b){return a.due_date<b.due_date?-1:1}),doing=todos.filter(function(x){return x.status==="doing"});
+  var late=due.filter(function(x){return x.due_date<t}).length;
+  var h='<div class="stats"><div class="stat'+(late?" bad":"")+'"><div class="l">Việc quá hạn</div><div class="v">'+late+'</div></div><div class="stat"><div class="l">Hạn trong 7 ngày</div><div class="v">'+(due.length-late)+'</div></div><div class="stat"><div class="l">Đang làm</div><div class="v">'+doing.length+'/3</div></div><div class="stat'+(flags.length?" bad":"")+'"><div class="l">Cờ rủi ro đang bật</div><div class="v">'+flags.length+'</div></div></div>';
+  h+='<div class="cols2"><section><h2 class="sec">Việc gần hạn<span><a href="viec/">mở To do</a></span></h2>'+(due.length?'<div class="alerts">'+due.slice(0,6).map(function(x){var l=x.due_date<t;return '<div class="alert" style="grid-template-columns:auto minmax(0,1fr)"><span class="pill '+(l?"bad":x.due_date===t?"warn":"")+'">'+(l?"Trễ":x.due_date===t?"Hôm nay":dm(x.due_date))+'</span><div class="msg">'+esc(x.title)+'</div></div>'}).join("")+'</div>':'<div class="empty">Không có việc nào đến hạn trong 7 ngày tới.</div>')+'</section>';
+  var rem=[];
+  flags.forEach(function(f){rem.push(['<span class="pill bad">'+esc(f.code)+'</span>',f.evidence,"kiemsoat/#ruiro"])});
+  decs.forEach(function(d){rem.push(['<span class="pill warn">Xem lại</span>',"Quyết định: "+d.title+" (hẹn "+dm(d.review_on)+")","kiemsoat/#quyetdinh"])});
+  if(!hasM)rem.push(['<span class="pill">Tháng '+(+ym.slice(5,7))+'</span>',"Chưa điền chỉ số M1 đến M8 của tháng này","kiemsoat/#chiso"]);
+  h+='<section><h2 class="sec">Nhắc từ Kiểm soát<span><a href="kiemsoat/">mở Kiểm soát</a></span></h2>'+(rem.length?'<div class="alerts">'+rem.map(function(x){return '<div class="alert" style="grid-template-columns:auto minmax(0,1fr)">'+x[0]+'<div class="msg"><a href="'+x[2]+'" style="color:inherit;text-decoration:none">'+esc(x[1])+'</a></div></div>'}).join("")+'</div>':'<div class="empty">Không có cờ hay việc chờ xem lại.</div>')+'</section></div>';
+  var el=$("#today");el.innerHTML=h;el.hidden=false;
+})();
 document.addEventListener("click",function(e){var r=e.target.closest(".biz-row");if(r&&!e.target.closest("a")){var u=r.dataset.href;if(/^https/.test(u))window.open(u,"_blank","noopener");else location.href=u}});
 </script>
 </body>
