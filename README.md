@@ -3,7 +3,7 @@
 Trang quản trị chung cho các business của Huy Tim. Trang chủ (`index.html`) liệt kê các business; mỗi business một thư mục:
 - `theme.css`: giao diện chung (Geist, xanh #1E4EED, khung lưới), nạp sau style riêng của từng trang.
 - `viec/`: bảng To do của Huy (Todo, Doing, Done), đọc ghi `public.hub_todos`, các chat tạo việc qua hàm `public.hub_add_todo`. Chỉ owner toàn hệ thống xem được.
-- `khach/`: TIMUS Customers, mỗi khách hàng một tab (giai đoạn, yêu cầu, tiến độ). Chỉ admin TIMUS xem được.
+- `khach/`: TIMUS Customers, mỗi khách hàng một tab (giai đoạn, yêu cầu, tiến độ, tài liệu). Chỉ admin TIMUS xem được. Tài liệu có thể đính kèm file PDF, lưu trong kho riêng tư `timus-client-files` (tối đa 50 MB mỗi file), mở bằng link có hạn 10 phút.
 - `content/`: Huy Tim Content: video, format, lệnh, highlight, Collaboration (đối tác, quyền lợi, tài liệu). Chỉ admin Content xem được, tài liệu nằm trong kho riêng tư `content-media`.
 - `timus/`: TIMUS Vận hành (đang chạy).
 - `van-phong/`: Văn phòng Agent 3D. Mỗi nhóm session Claude là một phòng ban, mỗi session là một nhân viên (đang làm, hoạt động hôm nay, nghỉ). Đọc `public.hub_agent_office` (bảng `hub.agent_office`, một dòng, chỉ owner toàn hệ thống xem), cập nhật trực tiếp qua realtime. Lịch "Cập nhật văn phòng Agent 3D" trên máy Huy ghi dữ liệu vào mỗi giờ.

@@ -92,7 +92,11 @@ tbody tr{cursor:pointer}tbody tr:hover{background:var(--hover)}
 .doc{border:1px solid var(--line);border-radius:6px;margin-bottom:8px}
 .doc summary{cursor:pointer;padding:9px 12px;font-weight:500;font-size:14.5px}
 .doc .in{padding:0 12px 12px}
-.doc .bar{display:flex;justify-content:flex-end;margin-bottom:8px}
+.doc .bar{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.docs h2{justify-content:flex-start;align-items:center;gap:8px}
+.docs h2 .btn{margin-left:auto}
+.doc .tag{display:inline-block;margin-left:8px;padding:0 6px;border:1px solid var(--line);border-radius:4px;font-size:11.5px;font-weight:600;color:var(--soft);vertical-align:1px}
+.doc .fn{font-size:13px;color:var(--soft);margin:0 0 8px;overflow-wrap:anywhere}
 .doc table{min-width:640px;font-size:14px}
 .doc td{vertical-align:top}
 .doc td.g{font-weight:600;background:var(--side)}
@@ -221,8 +225,30 @@ function vClient(c){
 }
 
 function docTable(d){return '<table><thead><tr><th>Khoản</th><th>Nội dung</th><th>Giá</th></tr></thead><tbody>'+(d.rows||[]).map(function(r){return r.length===1?'<tr><td class="g" colspan="3">'+esc(r[0])+'</td></tr>':'<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1])+'</td><td class="p">'+esc(r[2])+'</td></tr>'}).join("")+'</tbody></table>'}
-function docsHtml(c){var l=(S.docs||[]).filter(function(d){return d.client_id===c.id});if(!l.length)return "";
-  return '<div class="docs"><h2>Tài liệu<span>'+l.length+'</span></h2>'+l.map(function(d){var k="doc"+d.id;return '<details class="doc" data-key="'+k+'"'+(S.open[k]?" open":"")+'><summary>'+esc(d.title)+'</summary><div class="in"><div class="bar"><button class="btn sm" type="button" data-print-doc="'+d.id+'">In, lưu PDF</button></div><div class="tbl">'+docTable(d)+'</div>'+(d.note?'<p class="nt">'+esc(d.note)+'</p>':"")+'</div></details>'}).join("")+'</div>'}
+var FILES="timus-client-files";
+function fsize(b){return b>=1048576?(b/1048576).toFixed(1).replace(".",",")+" MB":Math.max(1,Math.round(b/1024))+" KB"}
+function docsHtml(c){var l=(S.docs||[]).filter(function(d){return d.client_id===c.id});
+  return '<div class="docs"><h2>Tài liệu<span>'+l.length+'</span><button class="btn sm" type="button" data-up-file="new">Tải PDF lên</button></h2>'+(l.length?l.map(function(d){var k="doc"+d.id,hasRows=(d.rows||[]).length>0;
+    var bar=(d.file_path?'<button class="btn sm primary" type="button" data-open-file="'+d.id+'">Mở PDF</button><button class="btn sm" type="button" data-up-file="'+d.id+'">Thay PDF</button><button class="btn sm" type="button" data-rm-file="'+d.id+'">Gỡ PDF</button>':'<button class="btn sm" type="button" data-up-file="'+d.id+'">Đính kèm PDF</button>')+(hasRows?'<button class="btn sm" type="button" data-print-doc="'+d.id+'">In bảng</button>':"");
+    return '<details class="doc" data-key="'+k+'"'+(S.open[k]?" open":"")+'><summary>'+esc(d.title)+(d.file_path?'<span class="tag">PDF</span>':"")+'</summary><div class="in"><div class="bar">'+bar+'</div>'+(d.file_path?'<p class="fn">'+esc(d.file_name||"")+(d.file_size?" · "+fsize(d.file_size):"")+'</p>':"")+(hasRows?'<div class="tbl">'+docTable(d)+'</div>':"")+(d.note?'<p class="nt">'+esc(d.note)+'</p>':"")+'</div></details>'}).join(""):'<p class="t2">Chưa có tài liệu.</p>')+'<input type="file" id="doc-file" accept="application/pdf" hidden></div>'}
+function safeName(n){return String(n).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/[^A-Za-z0-9._-]+/g,"-").replace(/-+/g,"-").slice(-120)||"tai-lieu.pdf"}
+async function uploadDoc(target,f){
+  if(!f)return;if(f.type!=="application/pdf"&&!/\.pdf$/i.test(f.name)){toast("Chỉ nhận file PDF.");return}
+  if(f.size>52428800){toast("File lớn hơn 50 MB.");return}
+  var cid=S.tab,path=cid+"/"+Date.now()+"-"+safeName(f.name);toast("Đang tải lên...");
+  var up=await sb.storage.from(FILES).upload(path,f,{upsert:false,contentType:"application/pdf"});if(up.error){fail(up.error);return}
+  var meta={file_path:path,file_name:f.name,file_size:f.size},old=target!=="new"?byId(S.docs||[],target):null,ok;
+  if(old){ok=await save(sb.from("timus_client_docs").update(meta).eq("id",old.id).select("id"),"Đã lưu PDF");if(ok&&old.file_path)await sb.storage.from(FILES).remove([old.file_path])}
+  else{meta.client_id=cid;meta.title=f.name.replace(/\.pdf$/i,"");ok=await save(sb.from("timus_client_docs").insert(meta).select("id"),"Đã tải PDF lên")}
+  if(!ok)await sb.storage.from(FILES).remove([path]);
+}
+async function openDoc(id){var d=byId(S.docs||[],id);if(!d||!d.file_path)return;var w=window.open("","_blank");
+  var r=await sb.storage.from(FILES).createSignedUrl(d.file_path,600);if(r.error){if(w)w.close();fail(r.error);return}
+  if(w)w.location.href=r.data.signedUrl;else location.href=r.data.signedUrl}
+async function removeDoc(id){var d=byId(S.docs||[],id);if(!d||!d.file_path)return;var hasRows=(d.rows||[]).length>0;
+  if(!confirm(hasRows?"Gỡ file PDF khỏi tài liệu này? Bảng tóm tắt vẫn giữ.":"Xóa tài liệu "+d.title+"?"))return;
+  var ok=hasRows?await save(sb.from("timus_client_docs").update({file_path:null,file_name:null,file_size:null}).eq("id",id).select("id"),"Đã gỡ PDF"):await save(sb.from("timus_client_docs").delete().eq("id",id).select("id"),"Đã xóa tài liệu");
+  if(ok)await sb.storage.from(FILES).remove([d.file_path])}
 function printDoc(id){var d=byId(S.docs||[],id);if(!d)return;var w=window.open("","_blank");if(!w){toast("Trình duyệt đang chặn cửa sổ in.");return}
   w.document.write('<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>'+esc(d.title)+'</title><style>@page{size:A4;margin:1.3cm 1.5cm}body{font-family:"Times New Roman",serif;font-size:10pt;color:#000;margin:16px}h1{font-size:14pt;text-align:center;margin:0 0 7pt}table{border-collapse:collapse;width:100%}th,td{border:.7pt solid #000;padding:2pt 4pt;text-align:left;vertical-align:top;font-size:9.5pt}th,td.g,td.p{font-weight:bold}th:first-child{width:22%}th:last-child{width:24%}tr{page-break-inside:avoid}p{font-size:9pt}</style></head><body><h1>'+esc(d.title).toUpperCase()+'</h1>'+docTable(d)+(d.note?'<p>'+esc(d.note)+'</p>':"")+'</body></html>');w.document.close();w.focus();w.print()}
 
@@ -288,13 +314,16 @@ function bind(){
     var sg=t.closest("[data-stage]");if(sg){var st=sg.dataset.stage;await save(sb.from("timus_clients").update({stage:st,status:clientStatus(st)}).eq("id",S.tab).select("id"),"Đã chuyển sang "+stageName(st));return}
     if(t.id==="up-add"){var u=$("#up-new"),b=u.value.trim();if(!b)return;u.value="";if(!await save(sb.from("timus_client_updates").insert({client_id:S.tab,body:b}).select("id"),"Đã ghi"))$("#up-new").value=b;return}
     var pd=t.closest("[data-print-doc]");if(pd){printDoc(pd.dataset.printDoc);return}
+    var uf=t.closest("[data-up-file]");if(uf){S.upTarget=uf.dataset.upFile;var fi=$("#doc-file");fi.value="";fi.click();return}
+    var of=t.closest("[data-open-file]");if(of){openDoc(of.dataset.openFile);return}
+    var rf=t.closest("[data-rm-file]");if(rf){removeDoc(rf.dataset.rmFile);return}
     var du=t.closest("[data-del-up]");if(du){await save(sb.from("timus_client_updates").delete().eq("id",du.dataset.delUp).select("id"),"Đã xóa ghi chép");return}
     var bk=t.closest("[data-rqbulk]");if(bk){rqBulk(bk.dataset.rqbulk);return}
     if(t.closest("select")||t.dataset.rqsel)return;
     var rq=t.closest("[data-rq]");if(rq)reqForm(byId(S.reqs,rq.dataset.rq));
   });
   document.addEventListener("toggle",function(e){var k=e.target.dataset&&e.target.dataset.key;if(k)S.open[k]=e.target.open},true);
-  document.addEventListener("change",function(e){if(e.target.dataset.rqsel){S.sel[e.target.dataset.rqsel]=e.target.checked;S.bulkArm=false;renderBulk();return}var id=e.target.dataset.st;if(id)save(sb.from("timus_client_requests").update({status:e.target.value}).eq("id",id).select("id"),"Đã cập nhật")});
+  document.addEventListener("change",function(e){if(e.target.id==="doc-file"){uploadDoc(S.upTarget||"new",e.target.files&&e.target.files[0]);return}if(e.target.dataset.rqsel){S.sel[e.target.dataset.rqsel]=e.target.checked;S.bulkArm=false;renderBulk();return}var id=e.target.dataset.st;if(id)save(sb.from("timus_client_requests").update({status:e.target.value}).eq("id",id).select("id"),"Đã cập nhật")});
   document.addEventListener("submit",async function(e){
     if(e.target.id==="d-form"){e.preventDefault();saveDrawer();return}
     if(e.target.id==="rq-add"){
@@ -335,7 +364,7 @@ function loginScreen(){
   if(!ok){$("#app").innerHTML='<div class="empty">Tài khoản này không có quyền xem trang khách hàng.</div>';return}
   var h=(location.hash||"").replace("#","");if(h)S.tab=h;
   bind();await load();
-  sb.channel("timus-customers").on("postgres_changes",{event:"*",schema:"timus",table:"client_requests"},reload).on("postgres_changes",{event:"*",schema:"timus",table:"client_updates"},reload).subscribe();
+  sb.channel("timus-customers").on("postgres_changes",{event:"*",schema:"timus",table:"client_requests"},reload).on("postgres_changes",{event:"*",schema:"timus",table:"client_updates"},reload).on("postgres_changes",{event:"*",schema:"timus",table:"client_docs"},reload).subscribe();
 })();
 })();
 </script>
