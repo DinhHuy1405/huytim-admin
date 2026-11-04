@@ -6,6 +6,7 @@ Trang quản trị chung cho các business của Huy Tim. Trang chủ (`index.ht
 - `khach/`: TIMUS Customers, mỗi khách hàng một tab (giai đoạn, yêu cầu, tiến độ). Chỉ admin TIMUS xem được.
 - `content/`: Huy Tim Content: video, format, lệnh, highlight, Collaboration (đối tác, quyền lợi, tài liệu). Chỉ admin Content xem được, tài liệu nằm trong kho riêng tư `content-media`.
 - `timus/`: TIMUS Vận hành (đang chạy).
+- `van-phong/`: Văn phòng Agent 3D. Mỗi nhóm session Claude là một phòng ban, mỗi session là một nhân viên (đang làm, hoạt động hôm nay, nghỉ). Đọc `public.hub_agent_office` (bảng `hub.agent_office`, một dòng, chỉ owner toàn hệ thống xem), cập nhật trực tiếp qua realtime. Lịch "Cập nhật văn phòng Agent 3D" trên máy Huy ghi dữ liệu vào mỗi giờ.
 - Academy: đang ở mentor.huytim.com, gắn vào sau.
 - Landing: gắn vào sau.
 

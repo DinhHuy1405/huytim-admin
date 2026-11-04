@@ -72,6 +72,7 @@
     var chung = [{ label: "Trang chủ", href: base || "./", icon: "home", current: o.active === "home" }];
     if (o.owner !== false) chung.push({ label: "To do", href: base + "viec/", icon: "check", current: o.active === "viec" });
     if (o.owner !== false) chung.push({ label: "Kiểm soát", href: base + "kiemsoat/", icon: "warn", current: o.active === "kiemsoat" && !o.groups });
+    if (o.owner !== false) chung.push({ label: "Văn phòng Agent", href: base + "van-phong/", icon: "box", current: o.active === "vanphong" });
     var biz = [{ label: "TIMUS Vận hành", href: base + "timus/", dot: "#9CA3B0", current: o.active === "timus" && !o.groups }];
     if (o.admin !== false) biz.push({ label: "TIMUS Customers", href: base + "khach/", dot: "#9CA3B0", current: o.active === "khach" });
     if (o.owner !== false) biz.push({ label: "Content", href: base + "content/", dot: "#9CA3B0", current: o.active === "content" });
