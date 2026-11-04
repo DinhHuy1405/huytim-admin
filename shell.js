@@ -85,7 +85,7 @@
     var tb = topbar();
     if (tb) {
       var u = o.user || {}, name = u.name || u.email || "";
-      document.getElementById("tb-r").innerHTML = (o.top || "") + (u.actions || []).map(function (a) { return '<button type="button" class="tb-ib" title="' + esc(a.label) + '" aria-label="' + esc(a.label) + '" ' + a.attrs + ">" + ic(a.icon) + "</button>"; }).join("")
+      document.getElementById("tb-r").innerHTML = flagHTML + (o.top || "") + (u.actions || []).map(function (a) { return '<button type="button" class="tb-ib" title="' + esc(a.label) + '" aria-label="' + esc(a.label) + '" ' + a.attrs + ">" + ic(a.icon) + "</button>"; }).join("")
         + (name ? '<div class="tb-u" title="' + esc(u.email || name) + '"><div class="av" aria-hidden="true">' + esc(name.trim().split(/\s+/).pop().charAt(0).toUpperCase()) + "</div><b>" + esc(name) + "</b></div>" : "");
     }
     if (!document.querySelector(".nsb-scrim")) { var s = document.createElement("div"); s.className = "nsb-scrim"; document.body.appendChild(s); }
@@ -192,5 +192,17 @@
       if (first) { e.preventDefault(); pick(+first.dataset.qi); }
     }
   });
-  window.HT = { render: render, ic: ic, spark: spark, range: range, onSignout: null };
+  /* cờ rủi ro đang bật (bảng hub_risk_flags, chỉ chủ hệ thống đọc được): hiện ở thanh trên, bấm mở Kiểm soát */
+  var flagHTML = "";
+  function flags(sb, base) {
+    if (!sb || !sb.from) return;
+    sb.from("hub_risk_flags").select("code").is("cleared_on", null).then(function (r) {
+      var l = (!r.error && r.data) || [];
+      flagHTML = l.length ? '<a class="tb-flag" href="' + esc((base || "") + "kiemsoat/#ruiro") + '" title="Cờ rủi ro đang bật, mở Kiểm soát">' + esc(l.map(function (x) { return x.code; }).join(" ")) + "</a>" : "";
+      var tr = document.getElementById("tb-r"), old = tr && tr.querySelector(".tb-flag");
+      if (old) old.remove();
+      if (tr && flagHTML) tr.insertAdjacentHTML("afterbegin", flagHTML);
+    }, function () {});
+  }
+  window.HT = { render: render, ic: ic, spark: spark, range: range, flags: flags, onSignout: null };
 })();

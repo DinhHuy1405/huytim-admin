@@ -361,7 +361,7 @@ function loginScreen(){
   var cur=await sb.auth.getSession(),session=cur.data&&cur.data.session;
   if(!session)session=await loginScreen();
   var email=String(session.user.email||"").toLowerCase();
-  HT.render({base:"../",active:"khach",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
+  HT.render({base:"../",active:"khach",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.flags(sb,"../");HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
   var r=await sb.from("core_roles").select("area,role").eq("email",email);
   var ok=!r.error&&(r.data||[]).some(function(x){return (x.area==="all"&&(x.role==="owner"||x.role==="admin"))||(x.area==="timus"&&(x.role==="owner"||x.role==="admin"))});
   if(!ok){$("#app").innerHTML='<div class="empty">Tài khoản này không có quyền xem trang khách hàng.</div>';return}

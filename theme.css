@@ -74,6 +74,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .tb-r{display:flex;align-items:center;gap:6px;flex:none}
 .tb-ib{width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:3px;background:none;color:var(--n80);cursor:pointer;box-shadow:none}
 .tb-ib:hover{background:var(--n20);color:var(--ink)}.tb-ib .ic{width:18px;height:18px}
+.tb-flag{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:3px;background:var(--bad-bg);color:var(--bad);font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+.tb-flag:hover{background:#FFD5D2}
 .tb-u{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px 0 4px;border:0;border-radius:3px;background:none;box-shadow:none;min-width:0;max-width:220px}
 .tb-u:hover{background:var(--n20)}
 .tb-u .av{width:24px;height:24px;flex:none;border-radius:50%;background:var(--b400);color:#fff;display:grid;place-items:center;font-weight:600;font-size:11px}

@@ -292,6 +292,7 @@ HT.render({base:"../",active:"kiemsoat"});
   var owner=!r.error&&(r.data||[]).some(function(x){return x.area==="all"&&x.role==="owner"});
   side(S.email);
   if(!owner){$("#app").innerHTML='<div class="empty">Tài khoản này không có quyền xem trang Kiểm soát.</div>';return}
+  HT.flags(sb,"../");
   await load();
   window.addEventListener("hashchange",function(){var v=(location.hash||"").replace("#","");if(R[v]&&v!==S.view){S.view=v;render()}});
 })();

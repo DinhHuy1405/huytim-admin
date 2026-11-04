@@ -372,7 +372,7 @@ HT.render({base:"../",active:"viec"});
   var cur=await sb.auth.getSession(),session=cur.data&&cur.data.session;
   if(!session)session=await loginScreen();
   var email=String(session.user.email||"").toLowerCase();
-  HT.render({base:"../",active:"viec",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
+  HT.render({base:"../",active:"viec",user:{email:email,actions:[{icon:"out",label:"Đăng xuất",attrs:"data-ht-signout"}]}});HT.flags(sb,"../");HT.onSignout=async function(){await sb.auth.signOut();location.reload()};
   var r=await sb.from("core_roles").select("area,role").eq("email",email);
   var owner=!r.error&&(r.data||[]).some(function(x){return x.area==="all"&&x.role==="owner"});
   if(!owner){$("#msg").innerHTML='<p class="empty" style="font-size:15px">Tài khoản này không có quyền xem bảng To do.</p>';return}
