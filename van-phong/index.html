@@ -51,7 +51,11 @@
 .tag .lead{font-size:10px;font-weight:600;color:#fff;background:#37352F;border-radius:4px;padding:1px 5px;margin-left:2px}
 .roomtag{font-size:13px;font-weight:600;color:#fff;border-radius:7px;padding:4px 10px;box-shadow:0 2px 8px rgba(0,0,0,.12);pointer-events:auto;cursor:pointer;font-family:Inter,sans-serif}
 .bubble{font:500 11.5px Inter,sans-serif;color:#37352F;background:#fff;border:1px solid #dcdad3;border-radius:10px;padding:4px 9px;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.08);opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s;pointer-events:none;position:relative}
+.bubble{white-space:normal;max-width:230px;width:max-content;text-align:left}
 .bubble.on{opacity:1;transform:none}
+.tag.huy{background:#1f2937;color:#fff;border-color:#1f2937}.tag.huy .role{color:#cbd5e1}
+.vclock{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#55534d;margin-top:6px;padding:6px 8px;border:1px solid #e4e2db;border-radius:8px;background:#fff}
+.vclock b{font-weight:600;color:#37352F;font-variant-numeric:tabular-nums}
 .bubble:after{content:"";position:absolute;left:50%;bottom:-5px;margin-left:-5px;width:8px;height:8px;background:#fff;border-right:1px solid #dcdad3;border-bottom:1px solid #dcdad3;transform:rotate(45deg)}
 .zonetag{font:600 12px Inter,sans-serif;color:#55534d;background:rgba(255,255,255,.9);border:1px solid #dcdad3;border-radius:7px;padding:3px 9px;pointer-events:auto;cursor:pointer}
 .zonetag.meet{color:#fff;border-color:transparent}
@@ -84,16 +88,19 @@
   <div class="stage" id="stage" hidden>
     <div class="vp" id="vside">
       <div class="stamp"><span class="live" id="live"></span><span id="stamp"></span></div>
+      <div class="vclock" id="vclock"></div>
       <div class="kpis" id="kpis"></div>
       <div class="vsec">Phòng ban</div>
       <button class="dept on" data-room="all"><div class="top"><span style="color:#76746d;font-weight:400;font-size:12.5px">Toàn cảnh văn phòng</span></div></button>
       <div id="depts"></div>
+      <button class="dept" data-room="lobby"><div class="top"><span class="vsw" style="background:#1E4EED"></span>Sảnh, phòng anh Huy<span class="n">Ra vào, báo cáo</span></div></button>
       <button class="dept" data-room="commons"><div class="top"><span class="vsw" style="background:#9a988f"></span>Khu chung<span class="n">Pantry, phòng họp, lounge</span></div></button>
       <div class="vsec" style="margin-top:10px">Đang diễn ra</div>
       <div id="feed"><div style="color:#9B9A97">Văn phòng đang khởi động...</div></div>
     </div>
     <div class="vp" id="vdetail"><button class="close" aria-label="Đóng">×</button><div id="detailBody"></div></div>
     <div class="vp" id="vtools">
+      <button id="bWarp">Tua nhanh 1 ngày</button>
       <button id="bTour">Tự tham quan</button>
       <button id="bNight">Ban đêm</button>
       <button id="bReset">Toàn cảnh</button>
@@ -235,14 +242,20 @@ function drawScreen(s){
 const HAIR = [0x2b2420,0x4a3426,0x1d1b1a,0x6b4a32], SKIN = [0xf0d2b6,0xe6c09c,0xd9ab84];
 const PG = { torso:new THREE.CapsuleGeometry(.38,.6,6,16), head:new THREE.SphereGeometry(.32,24,18), hair:new THREE.SphereGeometry(.335,24,18,0,Math.PI*2,0,Math.PI*.55),
   upper:new THREE.CapsuleGeometry(.12,.38,4,10), fore:new THREE.CapsuleGeometry(.1,.34,4,10), hand:new THREE.SphereGeometry(.1,10,10),
-  thigh:new THREE.CapsuleGeometry(.15,.4,4,10), shin:new THREE.CapsuleGeometry(.13,.4,4,10), shoe:rbox(.24,.14,.4,.05), cup:new THREE.CylinderGeometry(.1,.08,.24,12) };
-/* người có khớp: hông, gối, vai, khuỷu. Gốc ở mặt sàn, mặt hướng -z */
-function person(shirtColor, seed){
+  thigh:new THREE.CapsuleGeometry(.15,.4,4,10), shin:new THREE.CapsuleGeometry(.13,.4,4,10), shoe:rbox(.24,.14,.4,.05), cup:new THREE.CylinderGeometry(.1,.08,.24,12),
+  hairLong:new THREE.CapsuleGeometry(.25,.32,4,12), bun:new THREE.SphereGeometry(.16,14,12), lens:new THREE.TorusGeometry(.085,.018,6,16), badge:rbox(.16,.22,.03,.02) };
+/* người có khớp: hông, gối, vai, khuỷu. Gốc ở mặt sàn, mặt hướng -z. opt: hair (0 ngắn, 1 dài, 2 búi, 3 ngắn), glasses, badge (màu thẻ đeo) */
+function person(shirtColor, seed, opt={}){
   const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-  const shirt = M(shirtColor,{roughness:.85}), skin = M(SKIN[seed%3]);
+  const shirt = M(shirtColor,{roughness:.85}), skin = M(SKIN[seed%3]), hairMat = M(HAIR[seed%4],{roughness:.9});
   const torso = mesh(PG.torso, shirt, 0,1.8,0); body.add(torso);
   const head = new THREE.Group(); head.position.set(0,2.85,0); head.add(mesh(PG.head, skin));
-  const hair = mesh(PG.hair, M(HAIR[seed%4],{roughness:.9}), 0,.03,.03); hair.rotation.x = .25; head.add(hair); body.add(head);
+  const hair = mesh(PG.hair, hairMat, 0,.03,.03); hair.rotation.x = .25; head.add(hair); body.add(head);
+  const hv = opt.hair ?? seed % 4;
+  if (hv === 1) head.add(mesh(PG.hairLong, hairMat, 0,-.22,.17));
+  if (hv === 2) head.add(mesh(PG.bun, hairMat, 0,.24,.25));
+  if (opt.glasses ?? (seed % 5 === 2)) [-.12,.12].forEach(x => head.add(mesh(PG.lens, MAT.dark, x,.03,-.3)));
+  if (opt.badge !== undefined) body.add(mesh(PG.badge, M(opt.badge,{roughness:.5}), .18,1.98,-.38));
   const legs = [-.18,.18].map(x => { const hip = new THREE.Group(); hip.position.set(x,1.25,0);
     hip.add(mesh(PG.thigh, MAT.pants, 0,-.3,0)); const knee = new THREE.Group(); knee.position.set(0,-.6,0);
     knee.add(mesh(PG.shin, MAT.pants, 0,-.3,0)); knee.add(mesh(PG.shoe, MAT.dark, 0,-.6,-.08)); hip.add(knee); body.add(hip); return {hip, knee}; });
@@ -328,7 +341,7 @@ function build(depts, snapshotAt){
       if (a.lead){ const plate = mesh(rbox(.9,.22,.06,.02), M(d.color,{roughness:.4}), -1.0,1.75,-.2); plate.rotation.x = -.35; g.add(plate);
         const rug2 = new THREE.Mesh(new THREE.RingGeometry(1.95,2.05,64), new THREE.MeshBasicMaterial({color:d.color, transparent:true, opacity:.55})); rug2.rotation.x = -Math.PI/2; rug2.position.set(0,.05,.1); g.add(rug2); }
       const ch = chair(); ch.position.set(0,0,.85); g.add(ch);
-      const p = person(tint.clone().lerp(new THREE.Color(0xffffff), st==="idle" ? .55 : .15), seed); office.add(p.root);
+      const p = person(a.lead ? 0x3b3f46 : tint.clone().lerp(new THREE.Color(0xffffff), st==="idle" ? .55 : .2), seed, {badge:d.color}); office.add(p.root);
       let ring = null, lamp = null;
       if (st === "run"){ ring = new THREE.Mesh(new THREE.RingGeometry(1.7,1.85,64), new THREE.MeshBasicMaterial({color:COL.run, transparent:true, opacity:.6})); ring.rotation.x = -Math.PI/2; ring.position.set(0,.06,.1); g.add(ring); }
       if (st !== "idle"){ lamp = new THREE.PointLight(new THREE.Color(st==="run"?0x9fe1cb:0xffe2b0), 0, 6, 2); lamp.position.set(0,2.6,-.4); g.add(lamp); }
@@ -337,15 +350,15 @@ function build(depts, snapshotAt){
       el.onclick = e => { e.stopPropagation(); select(a.id); };
       const lab = new CSS2DObject(el); lab.position.set(0,3.65,0); p.root.add(lab);
       const bub = document.createElement("div"); bub.className = "bubble"; const bl = new CSS2DObject(bub); bl.position.set(0,4.35,0); p.root.add(bl);
-      workers[a.id] = {a, dept:d, st, g, p, ring, lamp, sc, scrMat, el, bub, dx:x, dz:z, seed, lead:!!a.lead};
+      workers[a.id] = {a, dept:d, st, g, p, ring, lamp, sc, scrMat, el, bub, dx:x, dz:z, seed, lead:!!a.lead, note:a.note || ""};
       g.traverse(o => { if (o.isMesh){ o.userData.agent = a.id; pickables.push(o); } });
       p.root.traverse(o => { if (o.isMesh){ o.userData.agent = a.id; pickables.push(o); } });
     });
   });
   const maxX = Math.max(...Object.values(rooms).map(r => Math.abs(r.cx))) + ROOM/2;
   buildCommons(maxX);
-  if (!homeSet){ homeSet = true; const cx = (-maxX + CX0 + 22)/2;
-    HOME.target.set(cx, 0, 2); HOME.pos.set(cx + 46, 72, 92); camera.position.copy(HOME.pos); controls.target.copy(HOME.target); }
+  if (!homeSet){ homeSet = true; const cx = (LX0 + CX0 + 22)/2;
+    HOME.target.set(cx, 0, 0); HOME.pos.set(cx + 50, 84, 104); camera.position.copy(HOME.pos); controls.target.copy(HOME.target); }
   office.updateMatrixWorld(true);
   initLife();
   ALL.forEach(a => {
@@ -360,27 +373,35 @@ function build(depts, snapshotAt){
   if (selected && workers[selected]) showDetail(selected); else if (selected) closeDetail();
 }
 
-/* ---------- Khu chung: lối đi, pantry, phòng họp, lounge ---------- */
+/* ---------- Khu chung, sảnh, phòng anh Huy, mạng lối đi ---------- */
 const V = (x, z) => new THREE.Vector3(x, 0, z);
 const yawOf = (dx, dz) => Math.atan2(-dx, -dz);
-let SPOTS = [], CONN_X = 0, CX0 = 0, MEET = null;
+let SPOTS = [], CONN_X = 0, LEFT_X = 0, CX0 = 0, LX0 = 0, MEET = null, ZONES = {}, DOOR = null, HUY = null;
+const LANE = {top:0, bot:22.5};
 const tileTex = canvasTex(256, 256, (g,w,h) => { g.fillStyle = "#eeece6"; g.fillRect(0,0,w,h); g.strokeStyle = "rgba(0,0,0,.06)"; g.lineWidth = 2;
   for (let i=0;i<=w;i+=64){ g.beginPath(); g.moveTo(i,0); g.lineTo(i,h); g.stroke(); g.beginPath(); g.moveTo(0,i); g.lineTo(w,i); g.stroke(); } }, [11,21]);
-function zoneTag(text, x, z, y=4.4){ const el = document.createElement("div"); el.className = "zonetag"; el.textContent = text;
-  el.onclick = () => { stopTour(); focusRoom("commons"); };
+function zoneTag(text, x, z, focus, y=4.4){ const el = document.createElement("div"); el.className = "zonetag"; el.textContent = text;
+  el.onclick = () => { stopTour(); focusRoom(focus); };
   const o = new CSS2DObject(el); o.position.set(x, y, z); office.add(o); return el; }
 function addSpot(kind, x, z, dx, dz, pose, zone, back=1){
-  const pos = V(x, z), approach = V(x - dx*back, z - dz*back);
-  const s = {kind, pos, approach, yaw:yawOf(dx, dz), pose, zone, busy:null}; SPOTS.push(s); return s; }
-function sofa(cx, cz, w, d, rot){ const g = new THREE.Group(); g.position.set(cx, .3, cz); g.rotation.y = rot; const m = M(0x6f7c86,{roughness:.95});
+  const s = {kind, pos:V(x, z), approach:V(x - dx*back, z - dz*back), yaw:yawOf(dx, dz), pose, zone, busy:null}; SPOTS.push(s); return s; }
+function sofa(cx, cz, w, d, rot, color=0x6f7c86){ const g = new THREE.Group(); g.position.set(cx, .3, cz); g.rotation.y = rot; const m = M(color,{roughness:.95});
   g.add(mesh(rbox(w,.6,d,.12), m, 0,.3,0)); g.add(mesh(rbox(w,1.1,.4,.12), m, 0,.85,d/2-.2));
   [-1,1].forEach(k => g.add(mesh(rbox(.35,.85,d,.1), m, k*(w/2-.17),.42,0))); office.add(g); }
+function strip(x, z, w, d, mat){ const m = mesh(new THREE.BoxGeometry(w,.3,d), mat, x,.15,z); m.castShadow = false; office.add(m); }
+function signTex(title, sub, color){ return canvasTex(1024, 320, (g,w,h) => { g.fillStyle = "#ffffff"; g.fillRect(0,0,w,h); g.fillStyle = color; g.fillRect(0,0,22,h);
+  g.fillStyle = "#1f1f1d"; g.font = "700 120px Inter, -apple-system, sans-serif"; g.fillText(title, 70, 170);
+  g.fillStyle = "#76746d"; g.font = "400 46px Inter, -apple-system, sans-serif"; g.fillText(sub, 74, 250); }); }
 
 function buildCommons(maxX){
-  SPOTS = []; CONN_X = maxX + 2.5; CX0 = maxX + 5; const X = v => CX0 + v;
-  const walk = M(0xd9d5cb,{roughness:.95}), minX = -maxX - 1;
-  [[(minX+CONN_X)/2, 0, CONN_X-minX+2, 4], [(minX+CONN_X)/2, 22.5, CONN_X-minX+2, 3.4]].forEach(([x,z,w,d]) => { const m = mesh(new THREE.BoxGeometry(w,.3,d), walk, x,.15,z); m.castShadow = false; office.add(m); });
-  const conn = mesh(new THREE.BoxGeometry(3.4,.3,46), walk, CONN_X,.15,1.5); conn.castShadow = false; office.add(conn);
+  SPOTS = []; ZONES = {}; CONN_X = maxX + 2.5; CX0 = maxX + 5; LEFT_X = -maxX - 2.5; LX0 = -maxX - 14;
+  const X = v => CX0 + v, L = v => LX0 + v;
+  const walk = M(0xd9d5cb,{roughness:.95});
+  strip((L(0) + CONN_X + 1.7)/2, LANE.top, CONN_X + 1.7 - L(0), 4, walk);
+  strip((LEFT_X - 1.7 + CONN_X + 1.7)/2, LANE.bot, CONN_X - LEFT_X + 3.4, 3.4, walk);
+  strip(CONN_X, 1.35, 3.4, 45.7, walk);
+  { const m = mesh(new THREE.BoxGeometry(3.4,.29,22.4), walk, LEFT_X,.145,12.4); m.castShadow = false; office.add(m); }
+  /* nền và tường khu chung */
   const fl = mesh(new THREE.BoxGeometry(22,.3,42), M(0xffffff,{map:tileTex,roughness:.7}), X(11),.15,0); fl.castShadow = false; office.add(fl);
   office.add(mesh(new THREE.BoxGeometry(22,3.6,.3), MAT.wall, X(11),2.1,-21.15));
   office.add(mesh(new THREE.BoxGeometry(.3,3.6,42), MAT.wall, X(22.15),2.1,0));
@@ -388,23 +409,23 @@ function buildCommons(maxX){
   office.add(mesh(new THREE.BoxGeometry(.34,.14,42.3), M(0x9a988f), X(22.15),3.97,0));
 
   /* Pantry */
-  const zP = {name:"pantry", entry:V(X(1.6), -13.5)};
+  ZONES.pantry = {node:{line:"conn", c:-13.5}, inPts:[V(X(1.6), -13.5)]};
   office.add(mesh(rbox(1.4,1.5,10,.04), M(0xe8e4dc,{roughness:.6}), X(20.6),1.05,-14));
   office.add(mesh(rbox(1.5,.08,10.1,.02), M(0x3a3a38,{roughness:.4}), X(20.6),1.84,-14));
   office.add(mesh(rbox(.8,.95,.7,.06), MAT.dark, X(20.6),2.35,-16.5));
   office.add(mesh(rbox(.7,.55,.6,.06), M(0xb9b9b5,{metalness:.6,roughness:.3}), X(20.6),2.15,-13.2));
   office.add(mesh(rbox(1.4,3,1.3,.06), M(0xdfe3e6,{roughness:.3,metalness:.3}), X(20.6),1.8,-7.8));
-  [-17,-14.5,-12].forEach(z => addSpot("coffee", X(19.25), z, 1, 0, "stand", zP, 1.4));
+  [-17,-14.5,-12].forEach(z => addSpot("coffee", X(19.25), z, 1, 0, "stand", ZONES.pantry, 1.4));
   [[X(7.5),-16],[X(12.5),-11]].forEach(([tx,tz]) => {
     office.add(mesh(new THREE.CylinderGeometry(.85,.85,.1,28), M(0xf3efe7,{roughness:.5}), tx,1.75,tz));
     office.add(mesh(new THREE.CylinderGeometry(.07,.07,1.4,10), MAT.chrome, tx,1.0,tz));
     office.add(mesh(new THREE.CylinderGeometry(.45,.45,.06,20), MAT.chrome, tx,.33,tz));
-    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([ox,oz]) => addSpot("table", tx+ox*1.3, tz+oz*1.3, -ox, -oz, "stand", zP, 1)); });
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([ox,oz]) => addSpot("table", tx+ox*1.3, tz+oz*1.3, -ox, -oz, "stand", ZONES.pantry, 1)); });
   [[X(3),-19.5],[X(16),-19.6]].forEach(([x,z]) => { const pl = plant(1.1); pl.position.set(x,.3,z); office.add(pl); });
-  zoneTag("Pantry", X(11), -13);
+  zoneTag("Pantry", X(11), -13, "commons");
 
   /* Phòng họp */
-  const zM = {name:"meet", entry:V(X(1.6), 1)};
+  ZONES.meet = {node:{line:"conn", c:1}, inPts:[V(X(1.6), 1)]};
   const gl = (w,d,x,z) => { const m = mesh(new THREE.BoxGeometry(w,2.6,d), MAT.glass, x,1.6,z); m.castShadow = false; office.add(m); };
   gl(21,.08, X(11.5),-5); gl(21,.08, X(11.5),7); gl(.08,4.8, X(1),-2.6); gl(.08,4.8, X(1),4.6);
   [[X(1),-5],[X(1),7],[X(1),-.2],[X(1),2.2]].forEach(([x,z]) => office.add(mesh(new THREE.BoxGeometry(.12,2.6,.12), MAT.chrome, x,1.6,z)));
@@ -414,23 +435,77 @@ function buildCommons(maxX){
   const seats = [];
   [X(8.6),X(12),X(15.4)].forEach(x => { seats.push([x, 1+2.15, 0,-1]); seats.push([x, 1-2.15, 0, 1]); });
   seats.push([X(6.6),1, 1,0]); seats.push([X(17.4),1, -1,0]);
-  seats.forEach(([x,z,dx,dz]) => { const c = chair(); c.position.set(x,.3,z); c.rotation.y = yawOf(dx,dz); office.add(c); addSpot("meet", x, z, dx, dz, "sit", zM, 1.1); });
-  const meetEl = zoneTag("Phòng họp", X(11), 1);
+  seats.forEach(([x,z,dx,dz]) => { const c = chair(); c.position.set(x,.3,z); c.rotation.y = yawOf(dx,dz); office.add(c); addSpot("meet", x, z, dx, dz, "sit", ZONES.meet, 1.1); });
+  const meetEl = zoneTag("Phòng họp", X(11), 1, "commons");
 
-  /* Lounge */
-  const zL = {name:"lounge", entry:V(X(1.6), 14.5)};
+  /* Lounge, bàn ăn trưa */
+  ZONES.lounge = {node:{line:"conn", c:14.5}, inPts:[V(X(1.6), 14.5)]};
   office.add(mesh(rbox(10,.04,8,.02), M(0xd9d2c3,{roughness:1}), X(14),.33,14.5));
   sofa(X(20.6), 14.5, 6.4, 1.6, -Math.PI/2);
   sofa(X(13), 19.7, 6.4, 1.6, Math.PI);
-  [12.6,14.5,16.4].forEach(z => addSpot("sofa", X(20.1), z, -1, 0, "sit", zL, 1.3));
-  [X(11.1),X(13),X(14.9)].forEach(x => addSpot("sofa", x, 19.2, 0, -1, "sit", zL, 1.3));
+  [12.6,14.5,16.4].forEach(z => addSpot("sofa", X(20.1), z, -1, 0, "sit", ZONES.lounge, 1.3));
+  [X(11.1),X(13),X(14.9)].forEach(x => addSpot("sofa", x, 19.2, 0, -1, "sit", ZONES.lounge, 1.3));
   office.add(mesh(rbox(3,.12,2,.04), MAT.deskWood, X(14.5),.95,14.2));
   [[-1.3,-.8],[1.3,-.8],[-1.3,.8],[1.3,.8]].forEach(([ox,oz]) => office.add(mesh(new THREE.BoxGeometry(.1,.6,.1), MAT.dark, X(14.5)+ox,.6,14.2+oz)));
-  addSpot("window", X(4.5), 10.6, 0, -1, "stand", zL, 1); addSpot("window", X(6.5), 18.8, 1, 0, "stand", zL, 1);
+  office.add(mesh(rbox(1.8,.12,5.6,.04), M(0xf3efe7,{roughness:.5}), X(6.5),1.75,14.5));
+  [X(6.5)].forEach(x => { office.add(mesh(new THREE.BoxGeometry(1.2,1.4,.15), MAT.dark, x,1.0,12.3)); office.add(mesh(new THREE.BoxGeometry(1.2,1.4,.15), MAT.dark, x,1.0,16.7)); });
+  [12.6,14.5,16.4].forEach(z => { [[X(5.1),1],[X(7.9),-1]].forEach(([x,dx]) => { const c = chair(); c.position.set(x,.3,z); c.rotation.y = yawOf(dx,0); office.add(c); addSpot("lunch", x, z, dx, 0, "sit", ZONES.lounge, 1); }); });
+  addSpot("window", X(4.5), 10.6, 0, -1, "stand", ZONES.lounge, 1); addSpot("window", X(10.5), 18.8, 1, 0, "stand", ZONES.lounge, 1);
   [[X(3),19.6],[X(21),9.6]].forEach(([x,z]) => { const pl = plant(1.25); pl.position.set(x,.3,z); office.add(pl); });
-  zoneTag("Lounge", X(11), 14.5);
+  zoneTag("Lounge", X(11), 14.5, "commons");
+
+  /* Sảnh và cửa ra vào */
+  const lf = mesh(new THREE.BoxGeometry(10,.32,13), M(0xffffff,{map:tileTex,roughness:.7}), L(5),.16,0); lf.castShadow = false; office.add(lf);
+  office.add(mesh(new THREE.BoxGeometry(.3,3.6,4.6), MAT.wall, L(-.15),2.1,-4.2)); office.add(mesh(new THREE.BoxGeometry(.3,3.6,4.6), MAT.wall, L(-.15),2.1,4.2));
+  office.add(mesh(new THREE.BoxGeometry(.4,3.4,.4), MAT.dark, L(-.15),2.0,-1.9)); office.add(mesh(new THREE.BoxGeometry(.4,3.4,.4), MAT.dark, L(-.15),2.0,1.9));
+  office.add(mesh(new THREE.BoxGeometry(.4,.4,4.2), MAT.dark, L(-.15),3.6,0));
+  const dg = mesh(new THREE.BoxGeometry(.06,3.0,3.4), MAT.glass, L(-.15),1.8,0); dg.castShadow = false; office.add(dg);
+  office.add(mesh(new THREE.BoxGeometry(10.3,3.6,.3), MAT.wall, L(5),2.1,6.6));
+  office.add(mesh(rbox(3.6,1.35,1.2,.08), M(0xf3efe7,{roughness:.5}), L(7.5),.98,3.4));
+  office.add(mesh(rbox(3.8,.08,1.4,.03), MAT.deskWood, L(7.5),1.7,3.4));
+  const sg = mesh(new THREE.PlaneGeometry(6,1.9), new THREE.MeshStandardMaterial({map:signTex("Huy Tim", "Văn phòng Agent", "#1E4EED"), roughness:.6}), L(5),2.4,6.44); sg.rotation.y = Math.PI; sg.castShadow = false; office.add(sg);
+  [[L(1),5.6],[L(9),5.6]].forEach(([x,z]) => { const pl = plant(1.3); pl.position.set(x,.3,z); office.add(pl); });
+  sofa(L(2.6), 3.9, 3.4, 1.4, 0, 0x8a8f7c);
+  DOOR = V(L(.6), 0);
+  ZONES.lobby = {node:{line:"top", c:L(3)}, inPts:[]};
+  zoneTag("Sảnh", L(5), 0, "lobby");
+
+  /* Phòng anh Huy */
+  ZONES.huy = {node:{line:"top", c:L(5)}, inPts:[V(L(5), -6.8), V(L(5), -9.6)]};
+  const hf = mesh(new THREE.BoxGeometry(10,.3,13), MAT.wood, L(5),.15,-14.5); hf.castShadow = false; office.add(hf);
+  office.add(mesh(new THREE.BoxGeometry(10,3.6,.3), MAT.wall, L(5),2.1,-21.15));
+  office.add(mesh(new THREE.BoxGeometry(.3,3.6,13), MAT.wall, L(-.15),2.1,-14.5));
+  gl(.08,13, L(10),-14.5); gl(3.8,.08, L(1.9),-8); gl(3.8,.08, L(8.1),-8);
+  office.add(mesh(new THREE.BoxGeometry(10.3,.14,.34), M(0x1E4EED,{roughness:.5}), L(5),3.97,-21.15));
+  office.add(mesh(rbox(4.4,.14,2,.05), MAT.deskWood, L(5),1.85,-16.6));
+  [L(3),L(7)].forEach(x => office.add(mesh(new THREE.BoxGeometry(.12,1.55,1.8), MAT.dark, x,1.05,-16.6)));
+  const hm = new THREE.Group(); hm.position.set(L(5),2.7,-17.2); hm.rotation.y = Math.PI; hm.add(mesh(rbox(2.2,1.2,.08,.03), MAT.dark)); office.add(hm);
+  const hc = chair(); hc.position.set(L(5),.3,-18.2); hc.rotation.y = Math.PI; office.add(hc);
+  office.add(mesh(rbox(1.2,3.2,4,.04), M(0xe8e4dc), L(.8),1.9,-14.5));
+  sofa(L(8.6), -12, 2.6, 1.3, -Math.PI/2, 0x5e6b78);
+  const pl2 = plant(1.3); pl2.position.set(L(9),.3,-20); office.add(pl2);
+  [L(4),L(6)].forEach(x => addSpot("report", x, -14.4, 0, -1, "stand", ZONES.huy, 1.2));
+  zoneTag("Phòng anh Huy", L(5), -9.2, "lobby", 4.2);
+  HUY = {seat:V(L(5), -18.1)};
 
   MEET = {active:false, next:simT + 18, members:[], el:meetEl};
+}
+
+/* ---------- Mạng lối đi: các đường top, bot, conn, left ---------- */
+const JUNC = {"top|conn":[()=>CONN_X, ()=>LANE.top], "bot|conn":[()=>CONN_X, ()=>LANE.bot], "top|left":[()=>LEFT_X, ()=>LANE.top], "bot|left":[()=>LEFT_X, ()=>LANE.bot]};
+function junction(a, b){ const k1 = a + "|" + b, k2 = b + "|" + a;
+  if (JUNC[k1]) return [JUNC[k1][0](), JUNC[k1][1]()]; if (JUNC[k2]) return [JUNC[k2][1](), JUNC[k2][0]()]; return null; }
+function linePt(n, o){ if (n.line === "top") return V(n.c, LANE.top + o); if (n.line === "bot") return V(n.c, LANE.bot + o*.6);
+  if (n.line === "conn") return V(CONN_X + o*.6, n.c); return V(LEFT_X + o*.6, n.c); }
+function travel(a, b, o){
+  if (a.line === b.line) return [linePt(b, o)];
+  const j = junction(a.line, b.line);
+  if (j) return [linePt({line:a.line, c:j[0]}, o), linePt(b, o)];
+  let best = null;
+  ["top","bot","conn","left"].forEach(mid => { const j1 = junction(a.line, mid), j2 = junction(mid, b.line); if (!j1 || !j2) return;
+    const len = Math.abs(a.c - j1[0]) + Math.abs(j1[1] - j2[0]) + Math.abs(j2[1] - b.c);
+    if (!best || len < best.len) best = {len, pts:[linePt({line:a.line, c:j1[0]}, o), linePt({line:mid, c:j2[0]}, o), linePt(b, o)]}; });
+  return best ? best.pts : [linePt(b, o)];
 }
 
 /* ---------- Đời sống văn phòng ---------- */
@@ -443,84 +518,117 @@ const PHR = {
   sofa:["Nghỉ chút đã", "Đọc lại tài liệu", "Nghĩ ý tưởng mới"],
   meet:["Cập nhật tiến độ nhé", "Việc nào ưu tiên?", "Mình nhận phần này", "Hạn là thứ Sáu", "Có gì cần Huy quyết?", "Chốt vậy nha"],
   window:["Trời đẹp ghê", "Đi dạo chút"],
+  lunch:["Trưa nay ăn gì?", "Cơm gà nha", "Ăn xong họp tiếp", "Món này ngon"],
+  huy:["Ok, làm tiếp nhé", "Gửi anh bản tóm tắt", "Việc này ưu tiên trước", "Tốt lắm", "Cái này để anh quyết"],
+  arrive:["Chào buổi sáng", "Hôm nay nhiều việc đây"],
+  leave:["Mai gặp lại", "Về nha mọi người"],
+  late:["Chạy nốt việc này", "Còn vài bước nữa"],
 };
 const pick = arr => arr[Math.random()*arr.length|0];
 const rnd = (a,b) => a + Math.random()*(b-a);
-let simT = 0;
+let simT = 0, warp = false, warpMin = 0, manualNight = null, presentCount = 0;
 const SEAT_Y = -.2, FLOOR_Y = .3, SPEED = 3.6;
 let feedItems = [];
+const PHASE_TXT = {night:"Ban đêm", morning:"Đầu giờ", work:"Giờ làm việc", lunch:"Nghỉ trưa", evening:"Buổi tối"};
+
+function clockMin(){ if (warp) return warpMin; const d = new Date(); return d.getHours()*60 + d.getMinutes() + d.getSeconds()/60; }
+function phaseOf(m){ return m < 420 || m >= 1320 ? "night" : m < 510 ? "morning" : m < 720 ? "work" : m < 810 ? "lunch" : m < 1080 ? "work" : "evening"; }
+function hhmm(m){ return `${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(Math.floor(m%60)).padStart(2,"0")}`; }
+function present(w, m){
+  if (w.st === "run") return true;
+  const arrive = 450 + w.jit;
+  const leave = w.lead ? 1170 + w.jit : w.st === "today" ? 1080 + w.jit*1.5 : 1050 + w.jit;
+  return m >= arrive && m < leave;
+}
+const huyPresent = m => m >= 480 && m < 1320;
 
 function deskPts(w){ const r = rooms[w.dept.id], x = r.cx + w.dx, z = r.cz + w.dz;
   return {seat:V(x, z+.85), aisle:V(x, z+2.45), visit:V(x+1.95, z+.35), visitAisle:V(x+1.95, z+2.45), gx:x+2.6, room:r}; }
-const roomOf = loc => loc.type === "seat" ? loc.w.dp.room : loc.type === "visit" ? loc.w.dp.room : null;
-const gxOf = loc => loc.w.dp.gx;
-function entryList(loc){ if (loc.type === "seat") return [loc.w.dp.aisle, loc.w.dp.seat];
-  if (loc.type === "visit") return [loc.w.dp.visitAisle, loc.w.dp.visit]; return [loc.s.approach, loc.s.pos]; }
-function route(from, to){
-  const pts = [], a0 = entryList(from)[0], rf = roomOf(from), rt = roomOf(to);
-  pts.push(a0);
-  if (rf && rf === rt){ const g = gxOf(from), b = entryList(to)[0]; pts.push(V(g, a0.z), V(g, b.z), ...entryList(to)); return pts; }
-  if (from.type === "spot" && to.type === "spot" && from.s.zone === to.s.zone) return [from.s.approach, ...entryList(to)];
-  let lane = null;
-  if (rf){ const g = gxOf(from); pts.push(V(g, a0.z), V(g, rf.doorZ), V(g, rf.laneZ)); lane = rf.laneZ; }
-  else { const zn = from.s.zone; pts.push(zn.entry, V(CONN_X, zn.entry.z)); }
-  if (rt){ const g = gxOf(to), b = entryList(to)[0];
-    if (lane !== null && lane === rt.laneZ) pts.push(V(g, rt.laneZ));
-    else { if (lane !== null) pts.push(V(CONN_X, lane)); pts.push(V(CONN_X, rt.laneZ), V(g, rt.laneZ)); }
-    pts.push(V(g, rt.doorZ), V(g, b.z), ...entryList(to)); }
-  else { const zn = to.s.zone; if (lane !== null) pts.push(V(CONN_X, lane)); pts.push(V(CONN_X, zn.entry.z), zn.entry, ...entryList(to)); }
-  return pts;
+const roomOf = loc => loc.type === "seat" || loc.type === "visit" ? loc.w.dp.room : null;
+function finalOf(loc){ if (loc.type === "seat") return loc.w.dp.seat; if (loc.type === "visit") return loc.w.dp.visit; if (loc.type === "door") return DOOR; return loc.s.pos; }
+function aisleOf(loc){ return loc.type === "seat" ? loc.w.dp.aisle : loc.w.dp.visitAisle; }
+function exitOf(loc){
+  if (loc.type === "seat" || loc.type === "visit"){ const r = roomOf(loc), g = loc.w.dp.gx, a = aisleOf(loc);
+    return {pts:[a, V(g, a.z), V(g, r.doorZ)], node:{line: r.row ? "bot" : "top", c:g}}; }
+  if (loc.type === "door") return {pts:[], node:ZONES.lobby.node};
+  const z = loc.s.zone; return {pts:[loc.s.approach, ...[...z.inPts].reverse()], node:z.node};
 }
-function say(w, text, dur=3.4){ if (!text) return; w.bub.textContent = text; w.bub.classList.add("on"); w.bubUntil = simT + dur; }
-function pushFeed(html){ const d = new Date(), tm = `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-  feedItems.unshift(`<div><time>${tm}</time>${html}</div>`); feedItems = feedItems.slice(0, 6);
+function enterOf(loc){
+  if (loc.type === "seat" || loc.type === "visit"){ const r = roomOf(loc), g = loc.w.dp.gx, a = aisleOf(loc);
+    return {pts:[V(g, r.doorZ), V(g, a.z), a, finalOf(loc)], node:{line: r.row ? "bot" : "top", c:g}}; }
+  if (loc.type === "door") return {pts:[DOOR], node:ZONES.lobby.node};
+  const z = loc.s.zone; return {pts:[...z.inPts, loc.s.approach, loc.s.pos], node:z.node};
+}
+function route(from, to, w){
+  const rf = roomOf(from), rt = roomOf(to);
+  if (rf && rf === rt){ const a = aisleOf(from), b = aisleOf(to), g = from.w.dp.gx; return [a, V(g, a.z), V(g, b.z), b, finalOf(to)]; }
+  if (from.type === "spot" && to.type === "spot" && from.s.zone === to.s.zone) return [from.s.approach, to.s.approach, to.s.pos];
+  const ex = exitOf(from), en = enterOf(to), o = w.off;
+  return [...ex.pts, linePt(ex.node, o), ...travel(ex.node, en.node, o), ...en.pts];
+}
+function say(w, text, dur=3.6){ if (!text) return; w.bub.textContent = text; w.bub.classList.add("on"); w.bubUntil = simT + dur; }
+function pushFeed(html){ const tm = hhmm(clockMin());
+  feedItems.unshift(`<div><time>${tm}</time>${html}</div>`); feedItems = feedItems.slice(0, 7);
   const f = document.getElementById("feed"); if (f) f.innerHTML = feedItems.join(""); }
-const nm = w => `<b>${esc(w.a.lead ? "Trưởng phòng " + w.dept.name : w.a.name)}</b>`;
 const nmPlain = w => w.a.lead ? "Trưởng phòng " + w.dept.name : w.a.name;
+const nm = w => `<b>${esc(nmPlain(w))}</b>`;
 function doing(w){
   if (!w.loc) return "";
+  if (w.mode === "home") return "Đã về nhà, mai quay lại";
   if (w.mode === "walk"){ const n = w.next; if (!n) return "Đang đi";
-    if (n.act === "desk") return "Đang về bàn làm việc"; if (n.act === "visit") return "Đang đi tới bàn " + nmPlain(n.loc.w);
-    if (n.act === "meet") return "Đang đi họp"; if (n.act === "coffee") return "Đang ra pantry"; if (n.act === "sofa") return "Đang ra lounge"; return "Đang đi dạo"; }
-  return ({desk: w.st === "run" ? "Đang làm việc tại bàn" : w.st === "today" ? "Đang ở bàn làm việc" : "Ngồi nghỉ tại bàn",
+    return ({desk:"Đang về bàn làm việc", visit:"Đang đi tới bàn " + (n.loc.w ? nmPlain(n.loc.w) : ""), meet:"Đang đi họp", coffee:"Đang ra pantry",
+      sofa:"Đang ra lounge", lunch:"Đang đi ăn trưa", report:"Đang lên báo cáo anh Huy", home:"Đang tan làm"})[n.act] || "Đang đi dạo"; }
+  return ({desk: w.st === "run" ? "Đang làm việc tại bàn" + (phaseOf(clockMin()) === "night" ? " (làm đêm)" : "") : w.st === "today" ? "Đang ở bàn làm việc" : "Ngồi nghỉ tại bàn",
     visit:"Đang trao đổi ở bàn " + (w.loc.w ? nmPlain(w.loc.w) : ""), coffee:"Đang pha cà phê", table:"Đang nói chuyện ở pantry",
-    sofa:"Đang nghỉ ở lounge", window:"Đang đứng nghỉ ở lounge", meet:"Đang họp phòng " + w.dept.name})[w.act] || "";
+    sofa:"Đang nghỉ ở lounge", window:"Đang đứng nghỉ ở lounge", meet:"Đang họp phòng " + (MEET && MEET.dept ? MEET.dept.name : w.dept.name),
+    lunch:"Đang ăn trưa", report:"Đang báo cáo anh Huy"})[w.act] || "";
 }
-function teammates(w){ return Object.values(workers).filter(x => x !== w && x.dept === w.dept); }
+function teammates(w){ return Object.values(workers).filter(x => x !== w && x.dept === w.dept && x.mode !== "home" && !x.leaving); }
 function freeSpot(kind){ const l = SPOTS.filter(s => s.kind === kind && !s.busy); return l.length ? pick(l) : null; }
 
 function goTo(w, loc, act, dur){
   if (w.loc && w.loc.type === "spot" && w.loc.s.busy === w) w.loc.s.busy = null;
   if (loc.type === "spot") loc.s.busy = w;
-  w.path = route(w.loc, loc); w.pi = 0; w.mode = "walk"; w.next = {loc, act, dur};
+  w.path = route(w.loc, loc, w); w.pi = 0; w.mode = "walk"; w.next = {loc, act, dur};
   w.p.cup.visible = false;
 }
 function settle(w, loc, act, dur){
   w.loc = loc; w.act = act; w.mode = "act"; w.timer = simT + dur;
-  const end = entryList(loc)[1]; w.pos.copy(end);
+  const end = finalOf(loc); w.pos.copy(end);
   if (loc.type === "seat") w.yawT = 0;
   else if (loc.type === "visit"){ const d = loc.w.dp.seat.clone().sub(end); w.yawT = yawOf(d.x, d.z); }
-  else w.yawT = loc.s.yaw;
+  else if (loc.type === "spot") w.yawT = loc.s.yaw;
   w.sit = act === "desk" || (loc.type === "spot" && loc.s.pose === "sit");
 }
 function arrive(w){
-  const n = w.next; w.next = null; settle(w, n.loc, n.act, n.dur);
+  const n = w.next; w.next = null;
+  if (n.act === "home"){ w.loc = {type:"door"}; w.mode = "home"; w.leaving = false; w.p.root.visible = false; w.bub.classList.remove("on"); return; }
+  settle(w, n.loc, n.act, n.dur);
   if (n.act === "visit"){ say(w, pick(w.a.lead ? PHR.lead : PHR.visit)); const tw = n.loc.w;
     if (tw.mode === "act" && tw.act === "desk") setTimeout(() => say(tw, pick(PHR.reply)), 1600); }
   else if (n.act === "coffee"){ w.p.cup.visible = true; if (Math.random() < .5) say(w, pick(PHR.coffee)); }
+  else if (n.act === "lunch"){ if (Math.random() < .5) say(w, pick(PHR.lunch)); }
+  else if (n.act === "report"){ say(w, `Báo cáo anh: ${w.note || "phòng " + w.dept.name + " ổn"}`, 4.5); setTimeout(() => { if (HUY && HUY.p.root.visible) say(HUY, pick(PHR.huy)); }, 2200); }
   else if (n.act === "table" || n.act === "window" || n.act === "sofa"){ if (Math.random() < .55) say(w, pick(PHR[n.act])); }
   else if (n.act === "meet"){ MEET.arrived++; if (MEET.arrived >= MEET.members.length) MEET.endAt = Math.min(MEET.endAt, simT + 22); }
+  else if (n.act === "desk" && w.justArrived){ w.justArrived = false; if (Math.random() < .5) say(w, pick(PHR.arrive)); }
   if (w.pendingMeet){ const s = w.pendingMeet; w.pendingMeet = null; goTo(w, {type:"spot", s}, "meet", 1e9); }
   else if (w.backAfterMeet){ w.backAfterMeet = false; goTo(w, {type:"seat", w}, "desk", deskDur(w)); }
 }
 const deskDur = w => w.lead ? rnd(10,18) : w.st === "run" ? rnd(30,60) : w.st === "today" ? rnd(22,42) : rnd(10,18);
 
 function decide(w){
-  const r = Math.random(), mates = teammates(w), home = {type:"seat", w};
-  const atDesk = w.loc.type === "seat";
+  const r = Math.random(), mates = teammates(w), home = {type:"seat", w}, ph = phaseOf(clockMin());
+  const atDesk = w.loc.type === "seat", stay = () => (w.timer = simT + deskDur(w));
   const visitOf = list => { const seated = list.filter(x => x.mode === "act" && x.act === "desk"); return seated.length ? pick(seated) : null; };
   const toSpot = (kind, dur, label) => { const s = freeSpot(kind); if (!s) return false; goTo(w, {type:"spot", s}, kind, dur);
     if (label) pushFeed(`${nm(w)} ${label}`); return true; };
+  if (ph === "lunch" && w.st !== "run"){
+    if (["lunch","sofa","table"].includes(w.act) && !atDesk) return (w.timer = simT + rnd(20,40));
+    if (toSpot("lunch", rnd(30,60), "đi ăn trưa") || toSpot("table", rnd(25,45)) || toSpot("sofa", rnd(25,45))) return;
+    return stay();
+  }
+  if (ph === "night"){ if (!atDesk) return goTo(w, home, "desk", deskDur(w)); if (r < .12 && toSpot("coffee", rnd(6,9))) return; if (r < .3) say(w, w.note || pick(PHR.late), 4); return stay(); }
   if (!atDesk){
     const back = w.lead ? .8 : w.st === "run" ? .95 : w.st === "today" ? .75 : .35;
     if (r < back) return goTo(w, home, "desk", deskDur(w));
@@ -528,57 +636,74 @@ function decide(w){
     return goTo(w, home, "desk", deskDur(w));
   }
   if (w.lead){
-    if (r < .55 && mates.length){ w.rr = ((w.rr ?? -1) + 1) % mates.length; const t = mates[w.rr];
+    if (r < .14 && ph === "work" && HUY && HUY.p.root.visible){ const s = freeSpot("report"); if (s){ goTo(w, {type:"spot", s}, "report", rnd(8,11)); pushFeed(`${nm(w)} lên phòng anh Huy báo cáo`); return; } }
+    if (r < .6 && mates.length){ w.rr = ((w.rr ?? -1) + 1) % mates.length; const t = mates[w.rr];
       if (t.mode === "act" && t.act === "desk"){ pushFeed(`${nm(w)} ghé bàn ${nm(t)}`); return goTo(w, {type:"visit", w:t}, "visit", rnd(6,9)); } }
-    if (r < .7 && toSpot("coffee", rnd(7,10), "ra pantry pha cà phê")) return;
-    return (w.timer = simT + deskDur(w));
+    if (r < .72 && toSpot("coffee", rnd(7,10), "ra pantry pha cà phê")) return;
+    return stay();
   }
   if (w.st === "run"){
-    if (r < .7) return (w.timer = simT + deskDur(w));
-    if (r < .85){ const linked = mates.filter(x => x.a.id === w.a.parent || x.a.parent === w.a.id);
+    if (r < .72) return stay();
+    if (r < .86){ const linked = mates.filter(x => x.a.id === w.a.parent || x.a.parent === w.a.id);
       const t = visitOf(linked.length ? linked : mates); if (t){ pushFeed(`${nm(w)} sang hỏi ${nm(t)}`); return goTo(w, {type:"visit", w:t}, "visit", rnd(6,9)); } }
     if (toSpot("coffee", rnd(7,10), "đi pha cà phê")) return;
-    return (w.timer = simT + deskDur(w));
+    return stay();
   }
   if (w.st === "today"){
-    if (r < .5) return (w.timer = simT + deskDur(w));
+    if (r < .5) return stay();
     if (r < .62 && toSpot("coffee", rnd(7,10), "ra pantry")) return;
     if (r < .72 && toSpot("table", rnd(9,14), "đứng nói chuyện ở pantry")) return;
     if (r < .88){ const t = visitOf(mates); if (t){ pushFeed(`${nm(w)} ghé bàn ${nm(t)}`); return goTo(w, {type:"visit", w:t}, "visit", rnd(6,9)); } }
     if (toSpot("sofa", rnd(10,16), "ra lounge nghỉ")) return;
-    return (w.timer = simT + deskDur(w));
+    return stay();
   }
-  if (r < .15) return (w.timer = simT + deskDur(w));
+  if (r < .15) return stay();
   if (r < .55 && toSpot("sofa", rnd(15,30), "ra lounge nghỉ")) return;
   if (r < .75 && toSpot("table", rnd(10,16))) return;
   if (r < .9 && toSpot("coffee", rnd(7,10))) return;
   if (toSpot("window", rnd(8,12))) return;
-  w.timer = simT + deskDur(w);
+  stay();
+}
+
+function makeHuy(){
+  const p = person(0x2b3340, 7, {badge:0x1E4EED, glasses:true, hair:0});
+  office.add(p.root);
+  const el = document.createElement("div"); el.className = "tag huy"; el.innerHTML = `<span class="dot" style="background:#1E4EED"></span>Huy Tim<span class="role">· Chủ hệ thống</span>`;
+  const lab = new CSS2DObject(el); lab.position.set(0,3.65,0); p.root.add(lab);
+  const bub = document.createElement("div"); bub.className = "bubble"; const bl = new CSS2DObject(bub); bl.position.set(0,4.35,0); p.root.add(bl);
+  HUY = {...HUY, p, bub, bubUntil:0};
 }
 
 function initLife(){
   feedItems = [];
-  Object.values(workers).forEach(w => {
+  const m0 = clockMin();
+  Object.values(workers).forEach((w, k) => {
     w.dp = deskPts(w); w.pos = new THREE.Vector3(); w.yaw = 0; w.yawT = 0; w.phase = Math.random()*6; w.bubUntil = 0;
+    w.jit = (w.seed*37 % 60); w.off = ((w.seed*53) % 9 - 4) * .32; w.leaving = false; w.noteNext = rnd(8, 30);
+    if (!present(w, m0)){ w.loc = {type:"door"}; w.mode = "home"; w.p.root.visible = false; w.pos.copy(DOOR); return; }
     let placed = false;
-    if (w.st === "idle" && !w.lead && Math.random() < .55){ const s = freeSpot(pick(["sofa","sofa","table","window"]));
+    if (w.st === "idle" && !w.lead && Math.random() < .55 && phaseOf(m0) !== "night"){ const s = freeSpot(pick(["sofa","sofa","table","window"]));
       if (s){ s.busy = w; settle(w, {type:"spot", s}, s.kind, rnd(4,20)); placed = true; } }
     if (!placed) settle(w, {type:"seat", w}, "desk", w.lead ? rnd(3,8) : rnd(4,25));
     w.yaw = w.yawT;
   });
-  pushFeed("Văn phòng bắt đầu ngày làm việc");
+  makeHuy();
+  pushFeed(`Văn phòng lúc ${hhmm(m0)}: ${PHASE_TXT[phaseOf(m0)].toLowerCase()}`);
 }
 
 function meetTick(t){
   if (!MEET) return;
+  const ph = phaseOf(clockMin());
   if (!MEET.active && t > MEET.next){
-    const cands = DEPTS.map(d => Object.values(workers).filter(w => w.dept.id === d.id)).filter(l => l.length >= 3 && l.some(w => w.lead));
+    if (ph !== "work"){ MEET.next = t + 20; return; }
+    const avail = w => w.mode !== "home" && !w.leaving;
+    const cands = DEPTS.map(d => Object.values(workers).filter(w => w.dept.id === d.id && avail(w))).filter(l => l.length >= 3 && l.some(w => w.lead));
     if (!cands.length){ MEET.next = t + 60; return; }
     const team = pick(cands), lead = team.find(w => w.lead), others = team.filter(w => !w.lead).sort(() => Math.random() - .5).slice(0, 3);
     const seats = SPOTS.filter(s => s.kind === "meet" && !s.busy).slice(0, 1 + others.length);
     MEET.members = [lead, ...others].slice(0, seats.length); MEET.arrived = 0; MEET.active = true; MEET.endAt = t + 90; MEET.dept = lead.dept;
     MEET.members.forEach((w, i) => { const s = seats[i]; s.busy = w;
-      if (w.mode === "act"){ if (w.loc.type === "spot" && w.loc.s.busy === w) w.loc.s.busy = null; w.path = route(w.loc, {type:"spot", s}); w.pi = 0; w.mode = "walk"; w.next = {loc:{type:"spot", s}, act:"meet", dur:1e9}; w.p.cup.visible = false; }
+      if (w.mode === "act"){ if (w.loc.type === "spot" && w.loc.s.busy === w) w.loc.s.busy = null; w.path = route(w.loc, {type:"spot", s}, w); w.pi = 0; w.mode = "walk"; w.next = {loc:{type:"spot", s}, act:"meet", dur:1e9}; w.p.cup.visible = false; }
       else w.pendingMeet = s; });
     MEET.el.textContent = `Phòng ${lead.dept.name} đang họp`; MEET.el.classList.add("meet"); MEET.el.style.background = hex(lead.dept.color);
     pushFeed(`${nm(lead)} gọi ${MEET.members.length - 1} người vào phòng họp`);
@@ -598,16 +723,43 @@ function meetTick(t){
 function limbs(p, lh, lk, rh, rk, ls, le, rs, re){
   p.legs[0].hip.rotation.x = lh; p.legs[0].knee.rotation.x = lk; p.legs[1].hip.rotation.x = rh; p.legs[1].knee.rotation.x = rk;
   p.arms[0].sh.rotation.x = ls; p.arms[0].el.rotation.x = le; p.arms[1].sh.rotation.x = rs; p.arms[1].el.rotation.x = re; }
+const SIT = Math.PI/2;
 
+function presenceTick(m){
+  const ph = phaseOf(m);
+  presentCount = 0;
+  Object.values(workers).forEach(w => {
+    if (!w.pos) return;
+    const want = present(w, m);
+    if (w.mode !== "home") presentCount++;
+    if (!want && w.mode === "act" && !w.leaving && w.act !== "meet"){
+      w.leaving = true; if (Math.random() < .6) say(w, pick(PHR.leave)); goTo(w, {type:"door"}, "home", 0); pushFeed(`${nm(w)} tan làm`); }
+    if (want && w.mode === "home"){
+      w.p.root.visible = true; w.loc = {type:"door"}; w.pos.copy(DOOR); w.mode = "act"; w.leaving = false; w.justArrived = true;
+      goTo(w, {type:"seat", w}, "desk", deskDur(w)); pushFeed(`${nm(w)} ${ph === "night" ? "vào làm đêm" : "đến văn phòng"}`); }
+  });
+  if (HUY && HUY.p){ const v = huyPresent(m); if (v !== HUY.p.root.visible){ HUY.p.root.visible = v; pushFeed(v ? "<b>Anh Huy</b> đến văn phòng" : "<b>Anh Huy</b> về nhà"); } }
+}
+
+let lastPresence = -1, lastClockUi = -1;
 function lifeUpdate(_t, dt, upd){
   simT += dt; const t = simT;
+  if (warp) warpMin = (warpMin + dt*8) % 1440;
+  const m = clockMin(), ph = phaseOf(m);
+  if (t - lastPresence > .5){ lastPresence = t; presenceTick(m); }
+  const autoNight = m < 390 || m >= 1110;
+  const wantNight = manualNight === null ? autoNight : manualNight;
+  if (wantNight !== night){ night = wantNight; bNight.classList.toggle("on", night); bNight.textContent = night ? "Ban ngày" : "Ban đêm"; }
+  if (t - lastClockUi > .5){ lastClockUi = t; const c = document.getElementById("vclock");
+    if (c) c.innerHTML = `<span><b>${hhmm(m)}</b> · ${PHASE_TXT[ph]}${warp ? " (tua nhanh)" : ""}</span><span>${presentCount + (HUY && HUY.p && HUY.p.root.visible ? 1 : 0)} người có mặt</span>`; }
   meetTick(t);
   Object.values(workers).forEach((w, i) => {
     if (!w.pos) return;
+    if (w.mode === "home"){ if (w.lamp) w.lamp.intensity = 0; w.scrMat.emissiveIntensity = 0; if (w.ring) w.ring.material.opacity = 0; return; }
     const p = w.p; let y = FLOOR_Y;
     p.torso.rotation.x = 0; p.head.rotation.x = 0; p.body.position.y = 0;
     if (w.mode === "walk"){
-      const tgt = w.path[w.pi], dx = tgt.x - w.pos.x, dz = tgt.z - w.pos.z, dist = Math.hypot(dx, dz), step = SPEED*dt;
+      const tgt = w.path[w.pi], dx = tgt.x - w.pos.x, dz = tgt.z - w.pos.z, dist = Math.hypot(dx, dz), step = SPEED*(warp ? 3 : 1)*dt;
       if (dist > .01) w.yawT = yawOf(dx, dz);
       if (dist <= step){ w.pos.x = tgt.x; w.pos.z = tgt.z; w.pi++; if (w.pi >= w.path.length) arrive(w); }
       else { w.pos.x += dx/dist*step; w.pos.z += dz/dist*step; }
@@ -617,11 +769,13 @@ function lifeUpdate(_t, dt, upd){
     } else {
       if (w.sit){ y = SEAT_Y;
         if (w.act === "desk"){
-          if (w.st === "idle" && !w.lead){ p.torso.rotation.x = -.14; p.head.rotation.x = -.18; limbs(p, Math.PI/2, -Math.PI/2, Math.PI/2, -Math.PI/2, .2, .9, .2, .9); }
+          if (w.st === "idle" && !w.lead){ p.torso.rotation.x = -.14; p.head.rotation.x = -.18; limbs(p, SIT, -SIT, SIT, -SIT, .2, .9, .2, .9); }
           else { const fast = w.st === "run" || w.lead, burst = fast || Math.sin(t*.5 + i*1.7) > .3;
-            limbs(p, Math.PI/2, -Math.PI/2, Math.PI/2, -Math.PI/2, .55, .95 + (burst ? Math.sin(t*15+i)*.08 : 0), .55, .95 + (burst ? Math.sin(t*15+i+2)*.08 : 0));
-            p.head.rotation.y = Math.sin(t*(fast ? .7 : .35) + i)*(fast ? .12 : .3); if (burst) w.sc.off += fast ? .12 : .04; }
-        } else { limbs(p, Math.PI/2, -Math.PI/2, Math.PI/2, -Math.PI/2, .35, .7, .35 + (w.bubUntil > t ? Math.sin(t*4)*.15 : 0), .7); p.head.rotation.y = Math.sin(t*.4 + i)*.25; if (w.act === "sofa") p.torso.rotation.x = -.12; }
+            limbs(p, SIT, -SIT, SIT, -SIT, .55, .95 + (burst ? Math.sin(t*15+i)*.08 : 0), .55, .95 + (burst ? Math.sin(t*15+i+2)*.08 : 0));
+            p.head.rotation.y = Math.sin(t*(fast ? .7 : .35) + i)*(fast ? .12 : .3); if (burst) w.sc.off += fast ? .12 : .04;
+            if (w.note && t > w.noteNext){ w.noteNext = t + rnd(35, 70); say(w, w.note, 4.5); if (Math.random() < .5) pushFeed(`${nm(w)}: ${esc(w.note)}`); } }
+        } else if (w.act === "lunch"){ const bite = Math.sin(t*1.3 + i) > .6; limbs(p, SIT, -SIT, SIT, -SIT, .45, .9, bite ? .6 : .45, bite ? 1.8 : 1.0); p.head.rotation.y = Math.sin(t*.4 + i)*.3; }
+        else { limbs(p, SIT, -SIT, SIT, -SIT, .35, .7, .35 + (w.bubUntil > t ? Math.sin(t*4)*.15 : 0), .7); p.head.rotation.y = Math.sin(t*.4 + i)*.25; if (w.act === "sofa") p.torso.rotation.x = -.12; }
       } else {
         if (w.act === "coffee"){ const sip = Math.sin(t*.9 + i) > .55; limbs(p, 0,0,0,0, .05,.2, sip ? .55 : .35, sip ? 1.9 : 1.45); }
         else { const talk = w.bubUntil > t; limbs(p, 0,0,0,0, .05,.2, talk ? .45 + Math.sin(t*3.2+i)*.2 : .08, talk ? .9 : .2); p.head.rotation.y = Math.sin(t*.5 + i)*.15; }
@@ -632,12 +786,16 @@ function lifeUpdate(_t, dt, upd){
     let dy = w.yawT - w.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); w.yaw += dy*Math.min(1, dt*9);
     p.root.position.set(w.pos.x, y, w.pos.z); p.root.rotation.y = w.yaw;
     if (w.bubUntil && t > w.bubUntil){ w.bub.classList.remove("on"); w.bubUntil = 0; }
-    const working = w.mode === "act" && w.act === "desk" && w.st !== "idle";
-    if (w.ring){ w.ring.material.opacity = working ? .25 + .35*(.5+.5*Math.sin(t*2.4)) : .12; w.ring.scale.setScalar(1 + .05*Math.sin(t*2.4)); }
-    if (upd && w.st !== "idle") drawScreen(w.sc);
-    if (w.lamp) w.lamp.intensity = nightK * (w.st === "run" ? 9 : 5);
+    const atDesk = w.mode === "act" && w.act === "desk";
+    if (w.ring){ w.ring.material.opacity = atDesk ? .25 + .35*(.5+.5*Math.sin(t*2.4)) : .1; w.ring.scale.setScalar(1 + .05*Math.sin(t*2.4)); }
+    if (upd && w.st !== "idle" && atDesk) drawScreen(w.sc);
+    if (w.lamp) w.lamp.intensity = atDesk ? nightK * (w.st === "run" ? 9 : 5) : 0;
     w.scrMat.emissiveIntensity = w.st === "idle" ? 0 : .7 + nightK*.8;
   });
+  if (HUY && HUY.p && HUY.p.root.visible){ const p = HUY.p;
+    limbs(p, SIT, -SIT, SIT, -SIT, .55, .95 + Math.sin(t*12)*.06, .55, .95 + Math.sin(t*12+2)*.06);
+    p.root.position.set(HUY.seat.x, SEAT_Y, HUY.seat.z); p.root.rotation.y = Math.PI; p.head.rotation.y = Math.sin(t*.4)*.2;
+    if (HUY.bubUntil && t > HUY.bubUntil){ HUY.bub.classList.remove("on"); HUY.bubUntil = 0; } }
   if (selected && workers[selected] && Math.floor(t*2) !== Math.floor((t-dt)*2)){ const d = document.getElementById("dnow"); if (d) d.textContent = doing(workers[selected]); }
 }
 
@@ -649,6 +807,7 @@ const flyTo = (pos, target, dur=1.3) => { fly = {p0:camera.position.clone(), t0:
 const ease = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
 function setActive(id){ document.querySelectorAll(".dept").forEach(b => b.classList.toggle("on", b.dataset.room === id)); }
 function focusRoom(id){ setActive(id); closeDetail();
+  if (id === "lobby") return flyTo(V(LX0+5, -6).add(new THREE.Vector3(14, 26, 30)), V(LX0+5, -6).setY(1));
   if (id === "commons") return flyTo(V(CX0+11, 0).add(new THREE.Vector3(10, 26, 30)), V(CX0+11, 0).setY(1));
   if (id === "all" || !rooms[id]) return flyTo(HOME.pos.clone(), HOME.target.clone());
   const c = rooms[id].center; flyTo(c.clone().add(new THREE.Vector3(14,22,26)), c.clone().add(new THREE.Vector3(0,1,1))); }
@@ -663,6 +822,7 @@ function showDetail(id){
     ${a.lead ? `<dt>Vai trò</dt><dd>Trưởng phòng</dd>` : ""}
     <dt>Công việc</dt><dd>${esc(a.role)}</dd>
     <dt>Lúc này</dt><dd id="dnow">${esc(doing(w))}</dd>
+    ${w.note ? `<dt>Việc gần nhất</dt><dd>${esc(w.note)}</dd>` : ""}
     <dt>Lần cuối</dt><dd>${esc((a.last||"").replace("T"," "))} <span style="color:#76746d">(${ago(a.last)})</span></dd>
     ${parent ? `<dt>Được giao bởi</dt><dd>${esc(parent.a.name)}</dd>` : ""}
     ${kids.length ? `<dt>Đang giao cho</dt><dd>${kids.map(k=>esc(k.name)).join("<br>")}</dd>` : ""}</dl>`;
@@ -692,10 +852,13 @@ renderer.domElement.addEventListener("pointermove", e => { const hit = pickAt(e)
 let tour = null; const bTour = document.getElementById("bTour");
 function stopTour(){ if (tour){ clearInterval(tour); tour = null; bTour.classList.remove("on"); } }
 bTour.onclick = () => { if (tour) return stopTour(); closeDetail(); bTour.classList.add("on");
-  let k = 0; const step = () => { const seq = ["all", ...DEPTS.map(d=>d.id), "commons"]; focusRoom(seq[k % seq.length]); k++; }; step(); tour = setInterval(step, 6000); };
+  let k = 0; const step = () => { const seq = ["all", "lobby", ...DEPTS.map(d=>d.id), "commons"]; focusRoom(seq[k % seq.length]); k++; }; step(); tour = setInterval(step, 6000); };
 let night = false, nightK = 0; const bNight = document.getElementById("bNight");
-bNight.onclick = () => { night = !night; bNight.classList.toggle("on", night); bNight.textContent = night ? "Ban ngày" : "Ban đêm"; };
-{ const h = new Date().getHours(); if (h >= 19 || h < 6) bNight.click(); }
+bNight.onclick = () => { manualNight = !night; };
+const bWarp = document.getElementById("bWarp");
+bWarp.onclick = () => { if (!warp){ warpMin = clockMin(); warp = true; } else warp = false; manualNight = null;
+  bWarp.classList.toggle("on", warp); bWarp.textContent = warp ? "Về giờ thật" : "Tua nhanh 1 ngày";
+  pushFeed(warp ? "Bắt đầu tua nhanh: 1 ngày trong 3 phút" : "Về lại giờ thật"); };
 
 function fit(){ const w = W(), h = H(); if (!w || !h) return; camera.aspect = w/h;
   camera.setViewOffset(w, h, -Math.min(140, w*.12), 0, w, h); camera.updateProjectionMatrix();
