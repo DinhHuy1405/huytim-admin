@@ -16,11 +16,14 @@
   var MARKET = { vn: "Việt Nam", us: "Mỹ", ca_hai: "Việt Nam và Mỹ" };
   var SOURCE = { gioi_thieu: "Giới thiệu", tiktok: "TikTok", facebook: "Facebook", inbox: "Inbox", hoc_vien: "Học viên", khac: "Khác" };
   var FEE = { standard: "Bảng phí chuẩn", custom: "Thỏa thuận riêng", none: "Chưa có" };
-  var TABS = [["tong_quan", "Tổng quan"], ["viec", "Việc"], ["nhat_ky", "Nhật ký"], ["tai_lieu", "Tài liệu"], ["phi", "Phí và hợp đồng"]];
+  var TABS = [["tong_quan", "Tổng quan"], ["tien_do", "Tiến độ"], ["viec", "Việc"], ["nhat_ky", "Nhật ký"], ["tai_lieu", "Tài liệu"], ["phi", "Phí và hợp đồng"]];
+  /* 7 bước vòng đời khách TIMUS; bước không áp dụng thì đánh Bỏ qua */
+  var STEPS = ["Tiếp nhận nhu cầu", "Nghiên cứu sản phẩm", "Gửi đề xuất và báo giá", "Khách xác nhận", "Ký hợp đồng", "Thiết lập (gian hàng; hàng đi Mỹ thêm giấy tờ, vận chuyển, kho)", "Vận hành và báo cáo tháng"];
+  var PST = { chua: "Chưa làm", dang: "Đang làm", xong: "Xong", bo_qua: "Bỏ qua" };
   var FILES = "timus-client-files", SHARE_SEC = 7 * 86400;
 
   var S = { view: "list", mode: "table", id: null, tab: "tong_quan", q: "", fStage: "", fMarket: "", fOwner: "", sort: "name", dir: 1, lf: "", sel: {}, bulkArm: false,
-    clients: [], reqs: [], ups: [], docs: [], shops: [], terms: [], team: [], me: "", ro: false, kind: null, edit: null, delArm: false, upTarget: null };
+    clients: [], reqs: [], ups: [], docs: [], shops: [], terms: [], prog: [], team: [], me: "", ro: false, kind: null, edit: null, delArm: false, upTarget: null };
   var sb = null;
   try { S.mode = localStorage.getItem("khach-mode") || "table"; } catch (_) {}
 
@@ -38,6 +41,11 @@
   function stageName(k) { var x = STAGE.filter(function (s) { return s[0] === k; })[0]; return x ? x[1] : ""; }
   function stageCls(k) { return k === "van_hanh" ? "ok" : k === "tam_dung" ? "warn" : k === "thiet_lap" ? "night" : "info"; }
   function shortMail(e) { return e ? String(e).split("@")[0] : ""; }
+  function progOf(cid) { var m = {}; S.prog.forEach(function (p) { if (p.client_id === cid) m[p.step] = p; }); return STEPS.map(function (n, i) { return m[i + 1] || { client_id: cid, step: i + 1, status: "chua", note: "", done_at: null, doc_id: null }; }); }
+  /* bước hiện tại: bước đang làm, nếu không có thì bước đầu tiên chưa làm; xong hết trả về 8 */
+  function curStep(cid) { var l = progOf(cid), d = l.filter(function (p) { return p.status === "dang"; })[0]; if (d) return d.step; var c = l.filter(function (p) { return p.status === "chua"; })[0]; return c ? c.step : 8; }
+  function segs(cid) { return '<span class="segs" aria-hidden="true">' + progOf(cid).map(function (p) { return '<i class="' + p.status + '" title="' + esc(STEPS[p.step - 1]) + '"></i>'; }).join("") + "</span>"; }
+  function progText(cid) { var n = curStep(cid); return n > 7 ? "Hoàn tất 7 bước" : "Bước " + n + "/7: " + STEPS[n - 1].split(" (")[0]; }
   var tt = null; function toast(m) { var t = $("#toast"); t.textContent = m; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(function () { t.classList.remove("show"); }, 2600); }
   function fail(e) { toast(e && e.code === "42501" ? "Tài khoản này không có quyền sửa." : e && e.code === "23503" ? "Còn shop đang gắn với khách hàng này, gỡ shop trước khi xóa." : "Chưa lưu được. Thử lại sau ít phút."); }
   function byId(l, id) { return l.filter(function (x) { return x.id === id; })[0] || null; }
@@ -54,10 +62,11 @@
       sb.from("timus_client_updates").select("*").order("created_at", { ascending: false }),
       sb.from("timus_shops").select("id,name,platform,market,status,client_id"),
       sb.from("timus_client_docs").select("*").order("created_at", { ascending: false }),
-      sb.from("timus_client_terms").select("*")
+      sb.from("timus_client_terms").select("*"),
+      sb.from("timus_client_progress").select("*")
     ]);
     if (r.slice(0, 5).some(function (x) { return x.error; })) { toast("Chưa tải được dữ liệu. Tải lại trang thử lại."); return; }
-    S.clients = r[0].data || []; S.reqs = r[1].data || []; S.ups = r[2].data || []; S.shops = r[3].data || []; S.docs = r[4].data || []; S.terms = r[5].error ? [] : (r[5].data || []);
+    S.clients = r[0].data || []; S.reqs = r[1].data || []; S.ups = r[2].data || []; S.shops = r[3].data || []; S.docs = r[4].data || []; S.terms = r[5].error ? [] : (r[5].data || []); S.prog = r[6].error ? [] : (r[6].data || []);
     render();
   }
   var rT = null; function reload() { clearTimeout(rT); rT = setTimeout(load, 150); }
@@ -122,15 +131,15 @@
   }
   function vTable(list) {
     var t = today();
-    var key = { name: function (c) { return c.name.toLowerCase(); }, stage: function (c) { return STAGE.map(function (s) { return s[0]; }).indexOf(c.stage); }, market: function (c) { return c.market || "z"; }, owner: function (c) { return c.owner_email || "z"; }, open: function (c) { return openOf(c.id).length; }, last: function (c) { return days(lastContact(c)); if (false) return 0; }, value: function (c) { return Number(c.deal_value || 0); } };
+    var key = { name: function (c) { return c.name.toLowerCase(); }, stage: function (c) { return STAGE.map(function (s) { return s[0]; }).indexOf(c.stage); }, market: function (c) { return c.market || "z"; }, owner: function (c) { return c.owner_email || "z"; }, open: function (c) { return openOf(c.id).length; }, last: function (c) { return days(lastContact(c)); if (false) return 0; }, value: function (c) { return Number(c.deal_value || 0); }, prog: function (c) { return curStep(c.id); } };
     var f = key[S.sort] || key.name;
     list = list.slice().sort(function (a, b) { var x = f(a), y = f(b); if (x === null) x = 1e9; if (y === null) y = 1e9; return (x < y ? -1 : x > y ? 1 : 0) * S.dir; });
     var th = function (k, l, cls) { return '<th class="' + (cls || "") + '"><button type="button" class="sortb' + (S.sort === k ? " on" : "") + '" data-sort="' + k + '">' + l + (S.sort === k ? HT.ic(S.dir > 0 ? "down" : "right") : "") + "</button></th>"; };
     if (!list.length) return '<div class="empty">Không có khách nào khớp bộ lọc.</div>';
-    return '<div class="tbl"><table><thead><tr>' + th("name", "Khách hàng") + th("stage", "Giai đoạn") + th("market", "Thị trường") + th("owner", "Phụ trách") + th("open", "Việc mở", "num") + th("last", "Liên hệ gần nhất", "num") + "<th>Bước tiếp theo</th>" + th("value", "Giá trị, phí", "num") + "</tr></thead><tbody>"
+    return '<div class="tbl"><table><thead><tr>' + th("name", "Khách hàng") + th("stage", "Giai đoạn") + th("prog", "Tiến độ") + th("market", "Thị trường") + th("owner", "Phụ trách") + th("open", "Việc mở", "num") + th("last", "Liên hệ gần nhất", "num") + "<th>Bước tiếp theo</th>" + th("value", "Giá trị, phí", "num") + "</tr></thead><tbody>"
       + list.map(function (c) {
         var op = openOf(c.id), late = op.filter(function (r) { return r.due_date && r.due_date < t; }).length, d = days(lastContact(c));
-        return '<tr data-go="' + c.id + '"><td><div class="t1">' + esc(c.name) + '</div><div class="t2">' + esc([c.services, c.industry].filter(Boolean).join(" · ")) + '</div></td><td><span class="pill ' + stageCls(c.stage) + '">' + stageName(c.stage) + '</span><div class="t2">' + stageSince(c) + ' ngày</div></td><td>' + esc(MARKET[c.market] || "") + "</td><td>" + esc(shortMail(c.owner_email)) + '</td><td class="num">' + (op.length || "") + (late ? ' <span class="late">(' + late + " quá hạn)</span>" : "") + '</td><td class="num ' + (c.stage !== "tam_dung" && (d === null || d > 7) ? "warnc" : "") + '">' + (d === null ? "Chưa có" : d === 0 ? "Hôm nay" : d + " ngày") + '</td><td class="t2">' + esc(c.next_action || "") + '</td><td class="num">' + (c.deal_value ? money(c.deal_value) : "") + "</td></tr>";
+        return '<tr data-go="' + c.id + '"><td><div class="t1">' + esc(c.name) + '</div><div class="t2">' + esc([c.services, c.industry].filter(Boolean).join(" · ")) + '</div></td><td><span class="pill ' + stageCls(c.stage) + '">' + stageName(c.stage) + '</span><div class="t2">' + stageSince(c) + ' ngày</div></td><td class="pcell">' + segs(c.id) + '<div class="t2">' + esc(progText(c.id)) + '</div></td><td>' + esc(MARKET[c.market] || "") + "</td><td>" + esc(shortMail(c.owner_email)) + '</td><td class="num">' + (op.length || "") + (late ? ' <span class="late">(' + late + " quá hạn)</span>" : "") + '</td><td class="num ' + (c.stage !== "tam_dung" && (d === null || d > 7) ? "warnc" : "") + '">' + (d === null ? "Chưa có" : d === 0 ? "Hôm nay" : d + " ngày") + '</td><td class="t2">' + esc(c.next_action || "") + '</td><td class="num">' + (c.deal_value ? money(c.deal_value) : "") + "</td></tr>";
       }).join("") + "</tbody></table></div>";
   }
   function vPipe(list) {
@@ -139,7 +148,7 @@
       var l = list.filter(function (c) { return c.stage === s[0]; });
       return '<div class="col" data-col="' + s[0] + '"><h2>' + s[1] + "<b>" + l.length + "</b></h2>" + l.map(function (c) {
         var op = openOf(c.id), late = op.filter(function (r) { return r.due_date && r.due_date < t; }).length, d = days(lastContact(c));
-        return '<div class="card" draggable="' + (!S.ro) + '" data-go="' + c.id + '" data-card="' + c.id + '"><div class="n">' + esc(c.name) + '</div><div class="m"><span>' + stageSince(c) + ' ngày</span><span' + (late ? ' class="late"' : "") + ">" + op.length + " việc" + (late ? ", " + late + " quá hạn" : "") + '</span><span' + (d === null || d > 7 ? ' class="warnc"' : "") + '">' + (d === null ? "chưa liên hệ" : "liên hệ " + d + " ngày trước") + "</span></div>" + (c.next_action ? '<div class="nx">' + esc(c.next_action) + "</div>" : "") + "</div>";
+        return '<div class="card" draggable="' + (!S.ro) + '" data-go="' + c.id + '" data-card="' + c.id + '"><div class="n">' + esc(c.name) + '</div><div class="m">' + segs(c.id) + '<span>' + stageSince(c) + ' ngày</span><span' + (late ? ' class="late"' : "") + ">" + op.length + " việc" + (late ? ", " + late + " quá hạn" : "") + '</span><span' + (d === null || d > 7 ? ' class="warnc"' : "") + '">' + (d === null ? "chưa liên hệ" : "liên hệ " + d + " ngày trước") + "</span></div>" + (c.next_action ? '<div class="nx">' + esc(c.next_action) + "</div>" : "") + "</div>";
       }).join("") + "</div>";
     }).join("") + "</div>";
   }
@@ -155,15 +164,39 @@
       + '<div class="acts">' + (tel ? '<a class="btn" href="tel:' + esc(tel) + '">Gọi</a><a class="btn" href="https://zalo.me/' + esc(tel.replace(/^\+84/, "0")) + '" target="_blank" rel="noopener">Zalo</a>' : "") + (c.email ? '<a class="btn" href="mailto:' + esc(c.email) + '">Email</a>' : "") + "</div></div>";
     h += '<div class="track">' + STAGE.map(function (s, i) { return '<button type="button" data-stage="' + s[0] + '" class="' + (i === idx ? "cur" : i < idx ? "past" : "") + (s[0] === "tam_dung" ? " pause" : "") + '"' + (S.ro ? " disabled" : "") + ">" + s[1] + "</button>"; }).join("") + "</div>";
     h += '<div class="kpis"><div class="kpi"><div class="l">Ở giai đoạn này</div><div class="v">' + stageSince(c) + "<small>ngày</small></div></div><div class=\"kpi\"><div class=\"l\">Việc mở</div><div class=\"v\">" + op.length + (late.length ? '<small class="late">' + late.length + " quá hạn</small>" : "") + '</div></div><div class="kpi"><div class="l">Liên hệ gần nhất</div><div class="v">' + (d === null ? "Chưa có" : d === 0 ? "Hôm nay" : d + "<small>ngày trước</small>") + '</div></div><div class="kpi"><div class="l">Tài liệu</div><div class="v">' + docs.length + "<small>" + sent.length + " đã gửi khách</small></div></div></div>";
-    h += '<div class="next"><b>Bước tiếp theo:</b> ' + esc(c.next_action || "Chưa ghi. Bấm Sửa hồ sơ để điền.") + "</div>";
+    h += '<div class="next"><b>Bước tiếp theo:</b> ' + esc(c.next_action || "Chưa ghi. Bấm Sửa hồ sơ để điền.") + '<span class="dt">' + segs(c.id) + " " + esc(progText(c.id)) + '</span></div>';
     h += '<nav class="tabs ctabs" role="tablist">' + TABS.map(function (tb) { var n = tb[0] === "viec" ? op.length : tb[0] === "tai_lieu" ? docs.length : tb[0] === "nhat_ky" ? S.ups.filter(function (u) { return u.client_id === c.id; }).length : 0; if (tb[0] === "phi" && S.ro) return ""; return '<button role="tab" aria-selected="' + (S.tab === tb[0]) + '" data-tab="' + tb[0] + '">' + tb[1] + (n ? "<small" + (tb[0] === "viec" && late.length ? ' class="bad"' : "") + ">" + n + "</small>" : "") + "</button>"; }).join("") + "</nav>";
-    var body = { tong_quan: vOverview, viec: vReqs, nhat_ky: vLog, tai_lieu: vDocs, phi: vFee }[S.tab];
+    var body = { tong_quan: vOverview, tien_do: vProgress, viec: vReqs, nhat_ky: vLog, tai_lieu: vDocs, phi: vFee }[S.tab];
     return h + '<div id="panel">' + body(c) + "</div>";
   }
   function reqRow(r, t, full) {
     var late = r.due_date && r.due_date < t && r.status !== "xong";
     return '<div class="rq' + (r.status === "xong" ? " done" : "") + '" tabindex="0" data-rq="' + r.id + '"><input type="checkbox" data-rqsel="' + r.id + '" aria-label="Chọn"' + (S.sel[r.id] ? " checked" : "") + (S.ro ? " disabled" : "") + '><div><div class="t1">' + esc(r.title) + '</div><div class="t2">' + [KIND[r.kind] || r.kind, r.priority === "cao" ? '<span class="pill bad">Cao</span>' : "", r.due_date ? '<span class="' + (late ? "late" : "") + '">Hạn ' + dm(r.due_date) + "</span>" : "", r.assignee_email ? esc(shortMail(r.assignee_email)) : "", r.doc_id && byId(S.docs, r.doc_id) ? "Tài liệu: " + esc(byId(S.docs, r.doc_id).title) : "", esc(r.next_step || "")].filter(Boolean).join(" · ") + "</div></div>"
       + '<select data-st="' + r.id + '" aria-label="Đổi trạng thái"' + (S.ro ? " disabled" : "") + ">" + RQ_ST.map(function (x) { return opt(x[0], x[1], r.status); }).join("") + "</select>" + (full && r.notes ? '<div class="nt">' + esc(r.notes) + "</div>" : "") + "</div>";
+  }
+  function vProgress(c) {
+    var l = progOf(c.id), docs = S.docs.filter(function (d) { return d.client_id === c.id; }), done = l.filter(function (p) { return p.status === "xong"; }).length, skip = l.filter(function (p) { return p.status === "bo_qua"; }).length;
+    var h = '<div class="pbar"><div class="t1">' + esc(progText(c.id)) + '</div><div class="t2">' + done + " xong · " + skip + " bỏ qua · " + (7 - done - skip) + ' còn lại</div></div>';
+    h += '<div class="tbl ptbl"><table><thead><tr><th style="width:36px">#</th><th>Bước</th><th style="width:140px">Trạng thái</th><th style="width:150px">Ngày</th><th>Ghi chú</th><th style="width:220px">Tài liệu</th></tr></thead><tbody>'
+      + l.map(function (p) { var k = c.id + "|" + p.step, dis = S.ro ? " disabled" : "";
+        return '<tr class="ps-' + p.status + '"><td class="t2">' + p.step + '</td><td class="t1">' + esc(STEPS[p.step - 1]) + "</td>"
+          + '<td><select data-pst="' + k + '" aria-label="Trạng thái bước ' + p.step + '"' + dis + ">" + opts(PST, p.status) + "</select></td>"
+          + '<td><input type="date" data-pdate="' + k + '" value="' + esc(p.done_at || "") + '" aria-label="Ngày"' + dis + "></td>"
+          + '<td><input data-pnote="' + k + '" value="' + esc(p.note || "") + '" placeholder="Ghi chú ngắn" aria-label="Ghi chú"' + dis + "></td>"
+          + '<td><select data-pdoc="' + k + '" aria-label="Tài liệu"' + dis + ">" + opt("", "Không gắn", p.doc_id || "") + docs.map(function (d) { return opt(d.id, d.title, p.doc_id || ""); }).join("") + "</select>" + (p.doc_id && byId(docs, p.doc_id) && byId(docs, p.doc_id).file_path ? ' <button class="btn sm" type="button" data-view-file="' + esc(p.doc_id) + '">Mở</button>' : "") + "</td></tr>";
+      }).join("") + "</tbody></table></div>";
+    h += '<p class="note">Bước không áp dụng với khách này thì chọn Bỏ qua. Đổi trạng thái sang Xong sẽ tự điền ngày hôm nay nếu ô ngày đang trống.</p>';
+    return h;
+  }
+  async function saveProg(k, patch) {
+    var a = k.split("|"), cid = a[0], step = +a[1], cur = progOf(cid)[step - 1];
+    var row = { client_id: cid, step: step, status: cur.status, done_at: cur.done_at, note: cur.note || "", doc_id: cur.doc_id };
+    Object.keys(patch).forEach(function (x) { row[x] = patch[x]; });
+    if (row.status === "xong" && !row.done_at) row.done_at = today();
+    if (row.status !== "xong" && patch.status && patch.status !== "xong" && !patch.done_at) row.done_at = cur.done_at;
+    if (cur.id) row.id = cur.id;
+    var ok = await save(sb.from("timus_client_progress").upsert(row, { onConflict: "client_id,step" }).select("id"), patch.status ? "Đã cập nhật tiến độ" : "");
+    if (ok && patch.status) sysLog(cid, "Tiến độ: bước " + step + " " + STEPS[step - 1].split(" (")[0] + " → " + PST[patch.status]);
   }
   function vOverview(c) {
     var t = today(), reqs = S.reqs.filter(function (r) { return r.client_id === c.id && r.status !== "xong"; }).sort(function (a, b) { return ((a.due_date || "9") < (b.due_date || "9") ? -1 : 1); }).slice(0, 5);
@@ -346,7 +379,11 @@
       if (t.id === "f-owner") { S.fOwner = t.value; render(); return; }
       if (t.id === "doc-file") { uploadDoc(S.upTarget || "new", t.files && t.files[0]); return; }
       if (t.dataset.rqsel) { S.sel[t.dataset.rqsel] = t.checked; S.bulkArm = false; renderBulk(); return; }
-      if (t.dataset.st) { setReqStatus(t.dataset.st, t.value); }
+      if (t.dataset.st) { setReqStatus(t.dataset.st, t.value); return; }
+      if (t.dataset.pst) { saveProg(t.dataset.pst, { status: t.value }); return; }
+      if (t.dataset.pdate) { saveProg(t.dataset.pdate, { done_at: t.value || null }); return; }
+      if (t.dataset.pnote) { saveProg(t.dataset.pnote, { note: t.value.trim() }); return; }
+      if (t.dataset.pdoc) { saveProg(t.dataset.pdoc, { doc_id: t.value || null }); return; }
     });
     document.addEventListener("click", async function (e) {
       var t = e.target, x;
@@ -437,6 +474,6 @@
     S.team = (r.data || []).filter(function (x) { return (x.area === "timus" || x.area === "all") && lvl(x.role) >= 2; }).map(function (x) { return x.email; });
     var legacy = (location.hash || "").replace("#", ""); if (legacy && legacy.indexOf("/") < 0 && legacy !== "all") { try { history.replaceState(null, "", "#/" + legacy); } catch (_) {} }
     route(); bind(); await load();
-    sb.channel("timus-customers").on("postgres_changes", { event: "*", schema: "timus", table: "clients" }, reload).on("postgres_changes", { event: "*", schema: "timus", table: "client_requests" }, reload).on("postgres_changes", { event: "*", schema: "timus", table: "client_updates" }, reload).on("postgres_changes", { event: "*", schema: "timus", table: "client_docs" }, reload).subscribe();
+    sb.channel("timus-customers").on("postgres_changes", { event: "*", schema: "timus", table: "clients" }, reload).on("postgres_changes", { event: "*", schema: "timus", table: "client_requests" }, reload).on("postgres_changes", { event: "*", schema: "timus", table: "client_updates" }, reload).on("postgres_changes", { event: "*", schema: "timus", table: "client_progress" }, reload).on("postgres_changes", { event: "*", schema: "timus", table: "client_docs" }, reload).subscribe();
   })();
 })();

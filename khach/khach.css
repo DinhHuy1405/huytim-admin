@@ -67,6 +67,16 @@ th .sortb .ic{width:12px;height:12px}
 .next b{font-weight:600}
 .next .dt{color:var(--n80);font-size:12px;margin-left:8px}
 .ctabs{margin-bottom:14px}
+/* tiến độ 7 bước */
+.segs{display:inline-flex;gap:2px;vertical-align:middle}
+.segs i{display:block;width:12px;height:6px;border-radius:2px;background:var(--n30)}
+.segs i.xong{background:var(--ok-num)}.segs i.dang{background:var(--b400)}.segs i.bo_qua{background:var(--n40);opacity:.45}
+.pcell{min-width:150px}.pcell .t2{margin-top:3px}
+.card .m .segs{margin-right:4px}
+.pbar{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:0 0 12px}
+.ptbl select,.ptbl input{width:100%;min-height:30px;border:2px solid var(--n30);border-radius:3px;background:#fff;font-size:13px;padding:2px 6px;color:var(--ink)}
+.ptbl select:focus,.ptbl input:focus{border-color:var(--b300);outline:0}
+.ptbl tr.ps-xong td.t1{color:var(--n80)}.ptbl tr.ps-bo_qua td{color:var(--n70)}.ptbl tr.ps-dang td.t1{color:var(--b500)}
 .ctabs small{margin-left:6px;font-size:11px;color:var(--n70)}
 .ctabs small.bad{color:var(--bad-num);font-weight:700}
 
