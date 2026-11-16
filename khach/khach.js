@@ -41,6 +41,21 @@
   function stageName(k) { var x = STAGE.filter(function (s) { return s[0] === k; })[0]; return x ? x[1] : ""; }
   function stageCls(k) { return k === "van_hanh" ? "ok" : k === "tam_dung" ? "warn" : k === "thiet_lap" ? "night" : "info"; }
   function shortMail(e) { return e ? String(e).split("@")[0] : ""; }
+  /* đối tác được gắn vào từng khách (timus.client_access): chủ tài khoản gắn, gỡ; đối tác chỉ thấy khách được gắn */
+  function memName(e) { var m = (S.mem || []).filter(function (x) { return x.email === e; })[0]; return m && m.display_name ? m.display_name : shortMail(e); }
+  function accOf(cid) { return (S.acc || []).filter(function (a) { return a.client_id === cid; }); }
+  function accTags(c, edit) { var l = accOf(c.id); if (!l.length && !edit) return ""; return '<div class="acc">' + (l.length ? '<span class="t2">Đối tác xem:</span>' : "") + l.map(function (a) { return '<span class="pill acc-tag" title="' + esc(a.email) + '">' + esc(memName(a.email)) + (edit ? '<button type="button" class="x" data-acc-del="' + esc(a.email) + '" aria-label="Gỡ quyền ' + esc(a.email) + '">×</button>' : "") + "</span>"; }).join("") + (edit ? '<button class="btn sm" type="button" data-acc-add="' + c.id + '">+ Gắn đối tác</button>' : "") + "</div>"; }
+  async function accAdd(cid) {
+    var known = {}; (S.acc || []).forEach(function (a) { known[a.email] = 1; }); var hint = Object.keys(known).join(", ");
+    var e = prompt("Email đối tác được xem và sửa khách này" + (hint ? " (đang dùng: " + hint + ")" : ""), Object.keys(known)[0] || ""); if (!e) return;
+    e = e.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) { toast("Email chưa đúng."); return; }
+    if (accOf(cid).some(function (a) { return a.email === e; })) { toast("Đối tác này đã được gắn."); return; }
+    if (await save(sb.from("timus_client_access").insert({ email: e, client_id: cid }).select("email"), "Đã gắn " + memName(e))) await sysLog(cid, "Gắn đối tác được xem và sửa: " + e);
+  }
+  async function accDel(cid, e) {
+    if (!confirm("Gỡ quyền của " + e + " ở khách này? Đối tác sẽ không thấy khách này nữa.")) return;
+    if (await save(sb.from("timus_client_access").delete().eq("client_id", cid).eq("email", e).select("email"), "Đã gỡ quyền " + memName(e))) await sysLog(cid, "Gỡ quyền đối tác: " + e);
+  }
   function progOf(cid) { var m = {}; S.prog.forEach(function (p) { if (p.client_id === cid) m[p.step] = p; }); return STEPS.map(function (n, i) { return m[i + 1] || { client_id: cid, step: i + 1, status: "chua", note: "", done_at: null, doc_id: null }; }); }
   /* bước hiện tại: bước đang làm, nếu không có thì bước đầu tiên chưa làm; xong hết trả về 8 */
   function curStep(cid) { var l = progOf(cid), d = l.filter(function (p) { return p.status === "dang"; })[0]; if (d) return d.step; var c = l.filter(function (p) { return p.status === "chua"; })[0]; return c ? c.step : 8; }
@@ -64,10 +79,12 @@
       sb.from("timus_client_docs").select("*").order("created_at", { ascending: false }),
       sb.from("timus_client_terms").select("*"),
       sb.from("timus_client_progress").select("*"),
-      sb.from("timus_client_doc_versions").select("*")
+      sb.from("timus_client_doc_versions").select("*"),
+      sb.from("timus_client_access").select("email,client_id"),
+      sb.from("core_members").select("email,display_name")
     ]);
     if (r.slice(0, 5).some(function (x) { return x.error; })) { toast("Chưa tải được dữ liệu. Tải lại trang thử lại."); return; }
-    S.clients = r[0].data || []; S.reqs = r[1].data || []; S.ups = r[2].data || []; S.shops = r[3].data || []; S.docs = r[4].data || []; S.terms = r[5].error ? [] : (r[5].data || []); S.prog = r[6].error ? [] : (r[6].data || []); S.vers = r[7].error ? [] : (r[7].data || []);
+    S.clients = r[0].data || []; S.reqs = r[1].data || []; S.ups = r[2].data || []; S.shops = r[3].data || []; S.docs = r[4].data || []; S.terms = r[5].error ? [] : (r[5].data || []); S.prog = r[6].error ? [] : (r[6].data || []); S.vers = r[7].error ? [] : (r[7].data || []); S.acc = r[8].error ? [] : (r[8].data || []); S.mem = r[9].error ? [] : (r[9].data || []);
     render();
   }
   var rT = null; function reload() { clearTimeout(rT); rT = setTimeout(load, 150); }
@@ -91,7 +108,7 @@
     var c = S.view === "client" ? byId(S.clients, S.id) : null;
     if (S.view === "client" && !c) { S.view = "list"; S.id = null; try { history.replaceState(null, "", "#/"); } catch (_) {} }
     $("#hact").innerHTML = S.view === "client" ? '<button class="btn" type="button" data-go="">' + HT.ic("left") + "Danh sách</button>" + (S.ro ? '<span class="ro">Chỉ xem</span>' : '<button class="btn" type="button" data-print-client="1">' + HT.ic("file") + '</button><button class="btn" type="button" data-edit-client="' + c.id + '">Sửa hồ sơ</button>')
-      : (S.ro ? '<span class="ro">Chỉ xem</span>' : '<button class="btn" type="button" data-pick="all">Đồng bộ thư mục khách</button><button class="btn primary" type="button" data-new="client">+ Khách hàng</button>');
+      : (S.ro || S.partner ? (S.partner ? "" : '<span class="ro">Chỉ xem</span>') : '<button class="btn" type="button" data-pick="all">Đồng bộ thư mục khách</button><button class="btn primary" type="button" data-new="client">+ Khách hàng</button>');
     $("#app").innerHTML = S.view === "client" ? vClient(c) : vList();
     HT.render({ base: "../", active: "khach", user: { email: S.me, actions: [{ icon: "out", label: "Đăng xuất", attrs: "data-ht-signout" }] }, groups: c ? [{ key: "kh", label: "Khách hàng", items: [{ label: c.name, current: true }] }] : null });
     document.title = (c ? c.name + " · " : "") + "TIMUS Customers";
@@ -140,7 +157,7 @@
     return '<div class="tbl"><table><thead><tr>' + th("name", "Khách hàng") + th("stage", "Giai đoạn") + th("prog", "Tiến độ") + th("market", "Thị trường") + th("owner", "Phụ trách") + th("open", "Việc mở", "num") + th("last", "Liên hệ gần nhất", "num") + "<th>Bước tiếp theo</th>" + th("value", "Giá trị, phí", "num") + "</tr></thead><tbody>"
       + list.map(function (c) {
         var op = openOf(c.id), late = op.filter(function (r) { return r.due_date && r.due_date < t; }).length, d = days(lastContact(c));
-        return '<tr data-go="' + c.id + '"><td><div class="t1">' + esc(c.name) + '</div><div class="t2">' + esc([c.services, c.industry].filter(Boolean).join(" · ")) + '</div></td><td><span class="pill ' + stageCls(c.stage) + '">' + stageName(c.stage) + '</span><div class="t2">' + stageSince(c) + ' ngày</div></td><td class="pcell">' + segs(c.id) + '<div class="t2">' + esc(progText(c.id)) + '</div></td><td>' + esc(MARKET[c.market] || "") + "</td><td>" + esc(shortMail(c.owner_email)) + '</td><td class="num">' + (op.length || "") + (late ? ' <span class="late">(' + late + " quá hạn)</span>" : "") + '</td><td class="num ' + (c.stage !== "tam_dung" && (d === null || d > 7) ? "warnc" : "") + '">' + (d === null ? "Chưa có" : d === 0 ? "Hôm nay" : d + " ngày") + '</td><td class="t2">' + esc(c.next_action || "") + '</td><td class="num">' + (c.deal_value ? money(c.deal_value) : "") + "</td></tr>";
+        return '<tr data-go="' + c.id + '"><td><div class="t1">' + esc(c.name) + (S.owner && accOf(c.id).length ? ' <span class="pill acc-tag">' + accOf(c.id).map(function (a) { return esc(memName(a.email)); }).join(", ") + "</span>" : "") + '</div><div class="t2">' + esc([c.services, c.industry].filter(Boolean).join(" · ")) + '</div></td><td><span class="pill ' + stageCls(c.stage) + '">' + stageName(c.stage) + '</span><div class="t2">' + stageSince(c) + ' ngày</div></td><td class="pcell">' + segs(c.id) + '<div class="t2">' + esc(progText(c.id)) + '</div></td><td>' + esc(MARKET[c.market] || "") + "</td><td>" + esc(shortMail(c.owner_email)) + '</td><td class="num">' + (op.length || "") + (late ? ' <span class="late">(' + late + " quá hạn)</span>" : "") + '</td><td class="num ' + (c.stage !== "tam_dung" && (d === null || d > 7) ? "warnc" : "") + '">' + (d === null ? "Chưa có" : d === 0 ? "Hôm nay" : d + " ngày") + '</td><td class="t2">' + esc(c.next_action || "") + '</td><td class="num">' + (c.deal_value ? money(c.deal_value) : "") + "</td></tr>";
       }).join("") + "</tbody></table></div>";
   }
   function vPipe(list) {
@@ -161,7 +178,7 @@
     var docs = S.docs.filter(function (d) { return d.client_id === c.id; }), sent = docs.filter(function (d) { return d.status === "da_gui"; });
     var d = days(lastContact(c));
     var tel = (c.phone || "").replace(/[^\d+]/g, "");
-    var h = '<div class="chead"><div class="l"><h3>' + esc(c.name) + '<span class="pill ' + stageCls(c.stage) + '">' + stageName(c.stage) + '</span></h3><div class="meta">' + [c.services ? "<b>" + esc(c.services) + "</b>" : "", c.market ? esc(MARKET[c.market]) : "", c.industry ? esc(c.industry) : "", c.owner_email ? "Phụ trách " + esc(shortMail(c.owner_email)) : "", c.source ? "Nguồn " + esc(SOURCE[c.source] || c.source) : ""].filter(Boolean).join("<span>·</span>") + "</div></div>"
+    var h = '<div class="chead"><div class="l"><h3>' + esc(c.name) + '<span class="pill ' + stageCls(c.stage) + '">' + stageName(c.stage) + '</span></h3><div class="meta">' + [c.services ? "<b>" + esc(c.services) + "</b>" : "", c.market ? esc(MARKET[c.market]) : "", c.industry ? esc(c.industry) : "", c.owner_email ? "Phụ trách " + esc(shortMail(c.owner_email)) : "", c.source ? "Nguồn " + esc(SOURCE[c.source] || c.source) : ""].filter(Boolean).join("<span>·</span>") + "</div>" + accTags(c, S.owner) + "</div>"
       + '<div class="acts">' + (tel ? '<a class="btn" href="tel:' + esc(tel) + '">Gọi</a><a class="btn" href="https://zalo.me/' + esc(tel.replace(/^\+84/, "0")) + '" target="_blank" rel="noopener">Zalo</a>' : "") + (c.email ? '<a class="btn" href="mailto:' + esc(c.email) + '">Email</a>' : "") + "</div></div>";
     h += '<div class="track">' + STAGE.map(function (s, i) { return '<button type="button" data-stage="' + s[0] + '" class="' + (i === idx ? "cur" : i < idx ? "past" : "") + (s[0] === "tam_dung" ? " pause" : "") + '"' + (S.ro ? " disabled" : "") + ">" + s[1] + "</button>"; }).join("") + "</div>";
     h += '<div class="kpis"><div class="kpi"><div class="l">Ở giai đoạn này</div><div class="v">' + stageSince(c) + "<small>ngày</small></div></div><div class=\"kpi\"><div class=\"l\">Việc mở</div><div class=\"v\">" + op.length + (late.length ? '<small class="late">' + late.length + " quá hạn</small>" : "") + '</div></div><div class="kpi"><div class="l">Liên hệ gần nhất</div><div class="v">' + (d === null ? "Chưa có" : d === 0 ? "Hôm nay" : d + "<small>ngày trước</small>") + '</div></div><div class="kpi"><div class="l">Tài liệu</div><div class="v">' + docs.length + "<small>" + sent.length + " đã gửi khách</small></div></div></div>";
@@ -631,6 +648,8 @@
       if ((x = t.closest("[data-print-doc]"))) { printDoc(x.dataset.printDoc); return; }
       if ((x = t.closest("[data-up-file]"))) { S.upTarget = x.dataset.upFile; var fi = $("#doc-multi"); fi.value = ""; fi.click(); return; }
       if ((x = t.closest("[data-pick]"))) { var pk = x.dataset.pick; if (pk === "multi") { S.upTarget = "new"; var fm = $("#doc-multi"); fm.value = ""; fm.click(); } else if (pk === "dir") { $("#doc-dir").click(); } else { $("#dir-all").click(); } return; }
+      if ((x = t.closest("[data-acc-add]"))) { accAdd(x.dataset.accAdd); return; }
+      if ((x = t.closest("[data-acc-del]"))) { accDel(S.id, x.dataset.accDel); return; }
       if (t.closest("[data-run-plan]")) { runPlan(); return; }
       if (t.closest("[data-del-dupes]")) { delDupes(); return; }
       if ((x = t.closest("[data-dupes]"))) { var cc = byId(S.clients, S.id); if (cc) showDupes(cc); return; }
@@ -696,7 +715,12 @@
     var mine = (r.data || []).filter(function (x) { return x.email === S.me; });
     var lvl = function (role) { return { owner: 4, admin: 3, staff: 2, viewer: 1 }[role] || 0; };
     var best = 0; mine.forEach(function (x) { if (x.area === "all" || x.area === "timus") best = Math.max(best, lvl(x.role)); });
-    if (best < 2) { $("#app").innerHTML = '<div class="empty">Tài khoản này không có quyền xem trang khách hàng.</div>'; return; }
+    S.owner = best >= 4;
+    if (best < 2) {
+      var ac = await sb.from("timus_client_access").select("client_id").eq("email", S.me);
+      if (ac.error || !(ac.data || []).length) { $("#app").innerHTML = '<div class="empty">Tài khoản này không có quyền xem trang khách hàng.</div>'; return; }
+      S.partner = true; best = 3;
+    }
     S.ro = best < 3;
     S.team = (r.data || []).filter(function (x) { return (x.area === "timus" || x.area === "all") && lvl(x.role) >= 2; }).map(function (x) { return x.email; });
     var legacy = (location.hash || "").replace("#", ""); if (legacy && legacy.indexOf("/") < 0 && legacy !== "all") { try { history.replaceState(null, "", "#/" + legacy); } catch (_) {} }

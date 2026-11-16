@@ -191,3 +191,7 @@ label.f.w{grid-column:1/-1}
 table.plan td,table.plan th{padding:6px 10px}
 table.plan tr.pl-same td{color:var(--n70)}
 .skl{margin:6px 0 0;padding-left:18px;font-size:13px}.skl li{margin:2px 0}
+/* đối tác được gắn vào khách */
+.acc{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.acc-tag{display:inline-flex;align-items:center;gap:4px}
+.acc-tag .x{border:0;background:none;padding:0 2px;cursor:pointer;color:inherit;font-size:14px;line-height:1}
