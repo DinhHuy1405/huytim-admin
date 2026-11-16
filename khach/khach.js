@@ -42,6 +42,13 @@
   function stageCls(k) { return k === "van_hanh" ? "ok" : k === "tam_dung" ? "warn" : k === "thiet_lap" ? "night" : "info"; }
   function shortMail(e) { return e ? String(e).split("@")[0] : ""; }
   /* đối tác được gắn vào từng khách (timus.client_access): chủ tài khoản gắn, gỡ; đối tác chỉ thấy khách được gắn */
+  /* menu: đối tác chỉ thấy mục Khách hàng, không có link các trang khác */
+  function navOpts(c) {
+    var o = { base: "../", active: "khach", user: { email: S.me, actions: [{ icon: "out", label: "Đăng xuất", attrs: "data-ht-signout" }] } };
+    if (S.partner) { o.admin = false; o.groups = [{ key: "kh", label: "Khách hàng", items: [{ label: "Danh sách khách", href: "#/", current: !c }].concat(c ? [{ label: c.name, current: true }] : []) }]; }
+    else o.groups = c ? [{ key: "kh", label: "Khách hàng", items: [{ label: c.name, current: true }] }] : null;
+    return o;
+  }
   function memName(e) { var m = (S.mem || []).filter(function (x) { return x.email === e; })[0]; return m && m.display_name ? m.display_name : shortMail(e); }
   function accOf(cid) { return (S.acc || []).filter(function (a) { return a.client_id === cid; }); }
   function accTags(c, edit) { var l = accOf(c.id); if (!l.length && !edit) return ""; return '<div class="acc">' + (l.length ? '<span class="t2">Đối tác xem:</span>' : "") + l.map(function (a) { return '<span class="pill acc-tag" title="' + esc(a.email) + '">' + esc(memName(a.email)) + (edit ? '<button type="button" class="x" data-acc-del="' + esc(a.email) + '" aria-label="Gỡ quyền ' + esc(a.email) + '">×</button>' : "") + "</span>"; }).join("") + (edit ? '<button class="btn sm" type="button" data-acc-add="' + c.id + '">+ Gắn đối tác</button>' : "") + "</div>"; }
@@ -110,7 +117,7 @@
     $("#hact").innerHTML = S.view === "client" ? '<button class="btn" type="button" data-go="">' + HT.ic("left") + "Danh sách</button>" + (S.ro ? '<span class="ro">Chỉ xem</span>' : '<button class="btn" type="button" data-print-client="1">' + HT.ic("file") + '</button><button class="btn" type="button" data-edit-client="' + c.id + '">Sửa hồ sơ</button>')
       : (S.ro || S.partner ? (S.partner ? "" : '<span class="ro">Chỉ xem</span>') : '<button class="btn" type="button" data-pick="all">Đồng bộ thư mục khách</button><button class="btn primary" type="button" data-new="client">+ Khách hàng</button>');
     $("#app").innerHTML = S.view === "client" ? vClient(c) : vList();
-    HT.render({ base: "../", active: "khach", user: { email: S.me, actions: [{ icon: "out", label: "Đăng xuất", attrs: "data-ht-signout" }] }, groups: c ? [{ key: "kh", label: "Khách hàng", items: [{ label: c.name, current: true }] }] : null });
+    HT.render(navOpts(c));
     document.title = (c ? c.name + " · " : "") + "TIMUS Customers";
     renderBulk();
     Object.keys(drafts).forEach(function (k) { var e = document.getElementById(k); if (e && drafts[k] && !e.value) e.value = drafts[k]; });
@@ -710,7 +717,7 @@
     var cur = await sb.auth.getSession(), session = cur.data && cur.data.session;
     if (!session) session = await loginScreen();
     S.me = String(session.user.email || "").toLowerCase();
-    HT.render({ base: "../", active: "khach", user: { email: S.me, actions: [{ icon: "out", label: "Đăng xuất", attrs: "data-ht-signout" }] } }); HT.flags(sb, "../");
+    HT.render({ base: "../", active: "khach", admin: false, groups: [], user: { email: S.me, actions: [{ icon: "out", label: "Đăng xuất", attrs: "data-ht-signout" }] } });
     var r = await sb.from("core_roles").select("email,area,role");
     var mine = (r.data || []).filter(function (x) { return x.email === S.me; });
     var lvl = function (role) { return { owner: 4, admin: 3, staff: 2, viewer: 1 }[role] || 0; };
@@ -722,6 +729,7 @@
       S.partner = true; best = 3;
     }
     S.ro = best < 3;
+    HT.render(navOpts(null)); if (!S.partner) HT.flags(sb, "../");
     S.team = (r.data || []).filter(function (x) { return (x.area === "timus" || x.area === "all") && lvl(x.role) >= 2; }).map(function (x) { return x.email; });
     var legacy = (location.hash || "").replace("#", ""); if (legacy && legacy.indexOf("/") < 0 && legacy !== "all") { try { history.replaceState(null, "", "#/" + legacy); } catch (_) {} }
     route(); bind(); await load();
