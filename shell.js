@@ -75,6 +75,7 @@
     if (o.owner !== false) chung.push({ label: "Văn phòng Agent", href: base + "van-phong/", icon: "box", current: o.active === "vanphong" });
     var biz = [{ label: "TIMUS Vận hành", href: base + "timus/", dot: "#9CA3B0", current: o.active === "timus" && !o.groups }];
     if (o.admin !== false) biz.push({ label: "TIMUS Customers", href: base + "khach/", dot: "#9CA3B0", current: o.active === "khach" });
+    if (o.admin !== false) biz.push({ label: "Thư viện mẫu", href: base + "khach/mau/", dot: "#9CA3B0", current: o.active === "mau" });
     if (o.owner !== false) biz.push({ label: "Content", href: base + "content/", dot: "#9CA3B0", current: o.active === "content" });
     biz.push({ label: "Academy", href: "https://mentor.huytim.com", dot: "#9CA3B0", ext: true });
     biz.push({ label: "Landing", disabled: true, badge: "Sắp gắn" });
@@ -92,7 +93,7 @@
     crumbs(o, base);
   }
   /* đường dẫn nhỏ phía trên tiêu đề trang: nhóm / trang / mục đang xem */
-  var CRUMB = { viec: ["Chung", "To do"], kiemsoat: ["Chung", "Kiểm soát"], vanphong: ["Chung", "Văn phòng Agent"], timus: ["Business", "TIMUS Vận hành"], khach: ["Business", "TIMUS Customers"], content: ["Business", "Content"] };
+  var CRUMB = { viec: ["Chung", "To do"], kiemsoat: ["Chung", "Kiểm soát"], vanphong: ["Chung", "Văn phòng Agent"], timus: ["Business", "TIMUS Vận hành"], khach: ["Business", "TIMUS Customers"], mau: ["Business", "Thư viện mẫu"], content: ["Business", "Content"] };
   function crumbs(o, base) {
     var hd = document.querySelector("header.bar"); if (!hd) return;
     var c = CRUMB[o.active]; var el = hd.querySelector(".crumbs");
@@ -100,7 +101,7 @@
     if (!el) { el = document.createElement("div"); el.className = "crumbs"; hd.insertBefore(el, hd.firstChild); }
     var cur = "", groups = o.groups || [];
     groups.forEach(function (g) { (g.items || []).forEach(function (it) { if (it.current) cur = it.label; }); });
-    var parts = ['<a href="' + esc(base || "./") + '">' + esc(c[0]) + "</a>", cur ? '<a href="' + esc(base + ({ timus: "timus/", khach: "khach/", content: "content/", viec: "viec/", kiemsoat: "kiemsoat/", vanphong: "van-phong/" })[o.active]) + '">' + esc(c[1]) + "</a>" : "<span>" + esc(c[1]) + "</span>"];
+    var parts = ['<a href="' + esc(base || "./") + '">' + esc(c[0]) + "</a>", cur ? '<a href="' + esc(base + ({ timus: "timus/", khach: "khach/", mau: "khach/mau/", content: "content/", viec: "viec/", kiemsoat: "kiemsoat/", vanphong: "van-phong/" })[o.active]) + '">' + esc(c[1]) + "</a>" : "<span>" + esc(c[1]) + "</span>"];
     if (cur) parts.push("<span>" + esc(cur) + "</span>");
     el.innerHTML = parts.join("<i>/</i>");
   }
