@@ -1,0 +1,7 @@
+.frm-aud{font-size:12px;color:var(--n80);margin-top:2px}
+.frm-aud b{font-weight:500;color:var(--n90)}
+.frm-miss{font-size:12px;color:var(--warn)}
+.frm-priv{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;width:100%}
+.mau-row .act.frm{flex-direction:column;align-items:flex-end;gap:6px}
+.frm-lock{font-size:11px;color:var(--n80);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+@media (max-width:700px){.mau-row .act.frm{align-items:flex-start}.frm-priv{justify-content:flex-start}}
