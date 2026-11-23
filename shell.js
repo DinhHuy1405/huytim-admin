@@ -86,7 +86,7 @@
     var tb = topbar();
     if (tb) {
       var u = o.user || {}, name = u.name || u.email || "";
-      document.getElementById("tb-r").innerHTML = flagHTML + (o.top || "") + (u.actions || []).map(function (a) { return '<button type="button" class="tb-ib" title="' + esc(a.label) + '" aria-label="' + esc(a.label) + '" ' + a.attrs + ">" + ic(a.icon) + "</button>"; }).join("")
+      document.getElementById("tb-r").innerHTML = flagHTML + (o.top || "") + (u.actions || []).map(function (a) { return '<button type="button" class="tb-ib' + (a.attrs && /ht-signout/.test(a.attrs) ? " tb-out" : "") + '" title="' + esc(a.label) + '" aria-label="' + esc(a.label) + '" ' + a.attrs + ">" + ic(a.icon) + (a.attrs && /ht-signout/.test(a.attrs) ? "<span>" + esc(a.label) + "</span>" : "") + "</button>"; }).join("")
         + (name ? '<div class="tb-u" title="' + esc(u.email || name) + '"><div class="av" aria-hidden="true">' + esc(name.trim().split(/\s+/).pop().charAt(0).toUpperCase()) + "</div><b>" + esc(name) + "</b></div>" : "");
     }
     if (!document.querySelector(".nsb-scrim")) { var s = document.createElement("div"); s.className = "nsb-scrim"; document.body.appendChild(s); }
@@ -178,7 +178,7 @@
     if (!e.target.closest(".tb-q")) { var box = document.getElementById("qres"); if (box) box.hidden = true; }
     if (e.target.closest(".menu-btn")) { drawerToggle(true); return; }
     if (e.target.closest(".nsb-scrim") || e.target.closest(".nsb a")) drawerToggle(false);
-    if (e.target.closest("[data-ht-signout]") && window.HT.onSignout) window.HT.onSignout();
+    if (e.target.closest("[data-ht-signout]")) { e.preventDefault(); window.HT.signOut(); }
   });
   document.addEventListener("input", function (e) { if (e.target.id === "nsb-q") { query = e.target.value; results(); } });
   document.addEventListener("keydown", function (e) {
@@ -205,5 +205,25 @@
       if (tr && flagHTML) tr.insertAdjacentHTML("afterbegin", flagHTML);
     }, function () {});
   }
-  window.HT = { render: render, ic: ic, spark: spark, range: range, flags: flags, onSignout: null };
+  /* Đăng xuất dùng chung cho mọi trang: không phụ thuộc mã riêng của trang (trước đây trang nào chưa gắn hàm thì nút bấm không làm gì,
+     ví dụ khi tài khoản không có quyền). Thu hồi phiên trên máy chủ (chờ tối đa 1,5 giây), xóa phiên trong trình duyệt rồi tải lại. */
+  var outBusy = false;
+  function signOut() {
+    if (outBusy) return; outBusy = true;
+    var cfg = window.TIMUS_CONFIG || {}, keys = [], tok = "";
+    try {
+      for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (/^sb-.+-auth-token/.test(k) || /^sb-.+-code-verifier/.test(k)) keys.push(k); }
+      keys.forEach(function (k) { try { var v = JSON.parse(localStorage.getItem(k) || "{}"); if (v && v.access_token) tok = v.access_token; } catch (_) {} });
+    } catch (_) {}
+    var fin = function () {
+      try { keys.forEach(function (k) { localStorage.removeItem(k); }); } catch (_) {}
+      try { sessionStorage.clear(); } catch (_) {}
+      location.reload();
+    };
+    if (!tok || !cfg.supabaseUrl) { fin(); return; }
+    var t = setTimeout(fin, 1500);
+    try { fetch(cfg.supabaseUrl + "/auth/v1/logout", { method: "POST", headers: { apikey: cfg.anonKey || "", Authorization: "Bearer " + tok } }).then(function () { clearTimeout(t); fin(); }, function () { clearTimeout(t); fin(); }); }
+    catch (_) { clearTimeout(t); fin(); }
+  }
+  window.HT = { signOut: signOut, render: render, ic: ic, spark: spark, range: range, flags: flags, onSignout: null };
 })();

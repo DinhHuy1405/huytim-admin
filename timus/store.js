@@ -321,7 +321,7 @@
       '<p>Tài khoản <b></b> đã đăng nhập nhưng chưa được cấp quyền vào trang vận hành TIMUS. Nhắn Huy thêm email này vào danh sách nhân viên.</p>' +
       '<button class="btn" id="outbtn" type="button">Đăng xuất</button></div>');
     box.querySelector("b").textContent = email;
-    box.querySelector("#outbtn").addEventListener("click", async function () { await sb.auth.signOut(); location.reload(); });
+    box.querySelector("#outbtn").addEventListener("click", function () { if (window.HT && HT.signOut) HT.signOut(); else sb.auth.signOut().then(function () { location.reload(); }, function () { location.reload(); }); });
   }
 
   var dbPromise = null;
@@ -345,7 +345,7 @@
   window.TIMUS_AUTH = {
     email: function () { return me.email; },
     client: function () { return sb; },
-    signOut: async function () { if (sb) await sb.auth.signOut(); location.reload(); }
+    signOut: function () { if (window.HT && HT.signOut) return HT.signOut(); (sb ? sb.auth.signOut() : Promise.resolve()).then(function () { location.reload(); }, function () { location.reload(); }); }
   };
   window.claude = {
     use: function (name) {
